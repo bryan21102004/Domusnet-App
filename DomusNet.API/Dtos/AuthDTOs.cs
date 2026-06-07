@@ -1,0 +1,29 @@
+namespace DomusNet.API.DTOs;
+
+public class LoginRequest
+{
+    public string Correo { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginResponse
+{
+    public string Token { get; set; } = string.Empty;
+    public DateTime Expira { get; set; }
+    public int UsuarioId { get; set; }
+    public string Rol { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public string Nombre { get; set; } = string.Empty;
+}
+
+public class RefreshRequest
+{
+    public int IdUsuario { get; set; }
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class RefreshResponse
+{
+    public string Token { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+}

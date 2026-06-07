@@ -1,6 +1,12 @@
 @DomusNet.API_HostAddress = http://localhost:5242
 
-GET {{DomusNet.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Login
+POST {{DomusNet.API_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin@domusnet.com",
+  "password": "Admin123!"
+}
 
 ###
