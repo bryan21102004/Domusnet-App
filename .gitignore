@@ -482,3 +482,14 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Node / Tailwind
+node_modules/
+
+# .NET
+bin/
+obj/
+
+# Visual Studio / Antigravity / VS Code
+.vs/
+.vscode/
