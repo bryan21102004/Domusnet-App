@@ -13,11 +13,11 @@ namespace DomusNet.API.Services;
 
 public class AuthService
 {
-    private readonly DomusNetDbContext _context;
+    private readonly DomusNetDBContext _context;
     private readonly IConfiguration _config;
     private readonly PasswordHasher<Usuario> _passwordHasher;
 
-    public AuthService(DomusNetDbContext context, IConfiguration config)
+    public AuthService(DomusNetDBContext context, IConfiguration config)
     {
         _context = context;
         _config = config;

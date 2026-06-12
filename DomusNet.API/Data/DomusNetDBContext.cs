@@ -3,15 +3,16 @@ using System.Data;
 using DomusNet.API.Data.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using DomusNet.API.Models;
 
 namespace DomusNet.API.Data;
 
-public class DomusNetDbContext : DbContext
+public class DomusNetDBContext : DbContext
 {
     private readonly IConfiguration _configuration;
     private readonly string _connectionString;
 
-    public DomusNetDbContext(DbContextOptions<DomusNetDbContext> options, IConfiguration configuration)
+    public DomusNetDBContext(DbContextOptions<DomusNetDBContext> options, IConfiguration configuration)
         : base(options)
     {
         _configuration = configuration;
@@ -32,6 +33,7 @@ public class DomusNetDbContext : DbContext
     public DbSet<Venta>            Ventas              => Set<Venta>();
     public DbSet<Reporte>          Reportes            => Set<Reporte>();
     public DbSet<AuditoriaAccion>  AuditoriaAcciones   => Set<AuditoriaAccion>();
+public DbSet<InstalacionProgramada> InstalacionesProgramadas => Set<InstalacionProgramada>(); 
 
     public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 

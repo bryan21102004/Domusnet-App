@@ -19,7 +19,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDbContext<DomusNetDbContext>(options =>
+builder.Services.AddDbContext<DomusNetDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConexionSQL")));
 
 builder.Services.AddScoped<AuthService>();
@@ -32,6 +32,8 @@ builder.Services.AddScoped<IngresosService>();
 builder.Services.AddScoped<NotificacionesService>();
 builder.Services.AddScoped<ReportesService>();
 builder.Services.AddScoped<ValidacionesGenerales>();
+builder.Services.AddScoped<InstalacionService>();
+builder.Services.AddSingleton<EmailService>();
 
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
@@ -61,7 +63,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<DomusNetDbContext>();
+    var context = scope.ServiceProvider.GetRequiredService<DomusNetDBContext>();
     try
     {
         context.Database.OpenConnection();

@@ -7,9 +7,9 @@ namespace DomusNet.API.Services;
 
 public class ClientesService
 {
-    private readonly DomusNetDbContext _context;
+    private readonly DomusNetDBContext _context;
 
-    public ClientesService(DomusNetDbContext context)
+    public ClientesService(DomusNetDBContext context)
     {
         _context = context;
     }

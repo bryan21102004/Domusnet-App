@@ -37,8 +37,10 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> Buscar(int id)
     {
         var data = await _service.BuscarAsync(id);
+
         if (data == null)
             return NotFound(new { mensaje = "Ticket no encontrado" });
+
         return Ok(data);
     }
 
@@ -55,9 +57,41 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> Crear([FromBody] TicketCreateDto dto)
     {
         var result = await _service.CrearAsync(dto);
-        return result.Resultado == 1
-            ? Ok(new { mensaje = "Ticket creado correctamente", id = result.IdGenerado })
-            : StatusCode(500, new { mensaje = "Error al crear ticket" });
+
+        if (result.Resultado == 1)
+        {
+            return Ok(new
+            {
+                mensaje = "Ticket creado correctamente",
+                id = result.IdGenerado
+            });
+        }
+
+        return BadRequest(new
+        {
+            mensaje = "No se pudo crear el ticket"
+        });
+    }
+
+    [HttpPost("reportar-cliente")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ReportarCliente([FromBody] ReportarAveriaClienteDto dto)
+    {
+        var result = await _service.ReportarClienteAsync(dto);
+
+        if (result.Resultado == 1)
+        {
+            return Ok(new
+            {
+                mensaje = "Reporte de avería creado correctamente",
+                id = result.IdGenerado
+            });
+        }
+
+        return BadRequest(new
+        {
+            mensaje = "No se pudo registrar el reporte de avería. Verifique que todos los campos estén completos."
+        });
     }
 
     [HttpPut("{id}/estado")]
@@ -65,6 +99,7 @@ public class TicketsController : ControllerBase
     public async Task<IActionResult> ActualizarEstado(int id, [FromBody] ActualizarEstadoTicketDto dto)
     {
         var result = await _service.ActualizarEstadoAsync(id, dto);
+
         return result switch
         {
             1 => Ok(new { mensaje = "Estado actualizado correctamente" }),

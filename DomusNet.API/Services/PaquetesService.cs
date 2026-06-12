@@ -8,9 +8,9 @@ namespace DomusNet.API.Services;
 
 public class PaquetesService
 {
-    private readonly DomusNetDbContext _context;
+    private readonly DomusNetDBContext _context;
 
-    public PaquetesService(DomusNetDbContext context)
+    public PaquetesService(DomusNetDBContext context)
     {
         _context = context;
     }

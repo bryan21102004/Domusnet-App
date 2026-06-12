@@ -7,10 +7,10 @@ namespace DomusNet.API.Services;
 
 public class UsuariosService
 {
-    private readonly DomusNetDbContext _context;
+    private readonly DomusNetDBContext _context;
     private readonly AuthService _authService;
 
-    public UsuariosService(DomusNetDbContext context, AuthService authService)
+    public UsuariosService(DomusNetDBContext context, AuthService authService)
     {
         _context = context;
         _authService = authService;

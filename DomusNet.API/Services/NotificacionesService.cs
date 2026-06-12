@@ -6,9 +6,9 @@ namespace DomusNet.API.Services;
 
 public class NotificacionesService
 {
-    private readonly DomusNetDbContext _context;
+    private readonly DomusNetDBContext _context;
 
-    public NotificacionesService(DomusNetDbContext context)
+    public NotificacionesService(DomusNetDBContext context)
     {
         _context = context;
     }
