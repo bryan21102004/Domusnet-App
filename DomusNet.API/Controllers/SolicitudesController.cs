@@ -11,6 +11,7 @@ public class SolicitudesController : ControllerBase
 {
     private readonly SolicitudesService _service;
     private readonly IConfiguration _config;
+    
 
     public SolicitudesController(SolicitudesService service, IConfiguration config)
     {
@@ -62,4 +63,44 @@ public class SolicitudesController : ControllerBase
             _ => StatusCode(500, new { mensaje = "Error desconocido" })
         };
     }
+
+  
+
+[HttpPost("{idSolicitud}/convertir-cliente")]
+public async Task<IActionResult> ConvertirSolicitudEnCliente(
+    int idSolicitud,
+    [FromBody] ConvertirSolicitudClienteDto dto)
+{
+    var resultado = await _service.ConvertirSolicitudEnClienteAsync(
+        idSolicitud,
+        dto.IdVendedor,
+        dto.Notas
+    );
+
+    if (resultado.Resultado == 1)
+    {
+        return Ok(new
+        {
+            mensaje = "Solicitud convertida en cliente correctamente",
+            idCliente = resultado.IdGenerado
+        });
+    }
+
+    string mensaje = resultado.Resultado switch
+    {
+        0 => "La solicitud no existe",
+        -1 => "La solicitud está cancelada",
+        -2 => "La solicitud ya fue atendida",
+        -3 => "La solicitud no tiene paquete asignado",
+        -4 => "Ya existe un cliente activo con ese teléfono",
+        -99 => "Ocurrió un error al convertir la solicitud en cliente",
+        _ => "No se pudo convertir la solicitud en cliente"
+    };
+
+    return BadRequest(new
+    {
+        mensaje,
+        codigo = resultado.Resultado
+    });
+}
 }

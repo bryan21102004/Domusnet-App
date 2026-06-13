@@ -34,7 +34,7 @@ builder.Services.AddScoped<ReportesService>();
 builder.Services.AddScoped<ValidacionesGenerales>();
 builder.Services.AddScoped<InstalacionService>();
 builder.Services.AddSingleton<EmailService>();
-
+builder.Services.AddScoped<SolicitudesService>();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
