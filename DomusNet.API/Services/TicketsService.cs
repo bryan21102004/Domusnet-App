@@ -93,7 +93,7 @@ public class TicketsService
                 ? "Se ha reportado una avería general en el servicio."
                 : dto.Descripcion.Trim();
 
-            _ = Task.Run(() => EnviarNotificacionesAveriaGlobalAsync(titulo, descripcion));
+            await EnviarNotificacionesAveriaGlobalAsync(titulo, descripcion);
         }
 
         return result;
@@ -133,6 +133,7 @@ public class TicketsService
                         $"Soporte Técnico DomusNet";
 
                     await _emailService.SendEmailAsync(cliente.Correo, subject, body);
+                    await Task.Delay(500);
                 }
                 catch (Exception ex)
                 {

@@ -1,69 +1,61 @@
-using System.IdentityModel.Tokens.Jwt;
-using DomusNet.API.DTOs;
+using DomusNet.API.Models;
 using DomusNet.API.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DomusNet.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Administrador")]
 public class ReportesController : ControllerBase
 {
-    private readonly ReportesService _service;
+    private readonly ReportesService _reportesService;
 
-    public ReportesController(ReportesService service)
+    public ReportesController(ReportesService reportesService)
     {
-        _service = service;
+        _reportesService = reportesService;
     }
 
-    [HttpGet("dashboard")]
-    public async Task<IActionResult> Dashboard()
+    [HttpPost("configuracion-distribucion")]
+    public async Task<IActionResult> GuardarConfiguracionDistribucion(
+        [FromBody] GuardarConfiguracionDistribucionRequest request)
     {
-        var data = await _service.ObtenerDashboardAsync();
-        return Ok(data);
+        var resultado = await _reportesService.GuardarConfiguracionDistribucionAsync(request);
+
+        if (resultado.Resultado == 1)
+        {
+            return Ok(resultado);
+        }
+
+        return BadRequest(resultado);
     }
 
-    [HttpGet("ingresos")]
-    public async Task<IActionResult> ReporteIngresos([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
+    [HttpPost("generar-ingresos")]
+    public async Task<IActionResult> GenerarReporteIngresos(
+        [FromBody] GenerarReporteIngresosRequest request)
     {
-        var data = await _service.ReporteIngresosAsync(desde, hasta);
-        return Ok(data);
+        var resultado = await _reportesService.GenerarReporteIngresosAsync(request);
+
+        if (resultado.Resultado == 1)
+        {
+            return Ok(resultado);
+        }
+
+        return BadRequest(resultado);
     }
 
-    [HttpGet("clientes")]
-    public async Task<IActionResult> ReporteClientes([FromQuery] string? estadoPago = null)
+      [HttpGet("ingresos-generados/{idIngresoMensual}")]
+    public async Task<IActionResult> ObtenerDetalleReporteIngreso(int idIngresoMensual)
     {
-        var data = await _service.ReporteClientesAsync(estadoPago);
-        return Ok(data);
-    }
+        var reporte = await _reportesService.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
 
-    [HttpGet("tickets")]
-    public async Task<IActionResult> ReporteTickets(
-        [FromQuery] string? estado = null,
-        [FromQuery] string? tipo = null,
-        [FromQuery] DateTime? desde = null,
-        [FromQuery] DateTime? hasta = null)
-    {
-        var data = await _service.ReporteTicketsAsync(estado, tipo, desde, hasta);
-        return Ok(data);
-    }
+        if (reporte == null)
+        {
+            return NotFound(new
+            {
+                mensaje = "No se encontró el reporte de ingresos."
+            });
+        }
 
-    [HttpGet("historial")]
-    public async Task<IActionResult> HistorialGenerados()
-    {
-        var data = await _service.ListarGeneradosAsync();
-        return Ok(data);
-    }
-
-    [HttpPost("guardar")]
-    public async Task<IActionResult> Guardar([FromBody] GuardarReporteDto dto)
-    {
-        var idUsuario = int.Parse(User.FindFirst(JwtRegisteredClaimNames.Sub)!.Value);
-        var result = await _service.GuardarReporteAsync(dto, idUsuario);
-        return result.Resultado == 1
-            ? Ok(new { mensaje = "Reporte guardado en historial", id = result.IdGenerado })
-            : StatusCode(500, new { mensaje = "Error al guardar reporte" });
+        return Ok(reporte);
     }
 }
