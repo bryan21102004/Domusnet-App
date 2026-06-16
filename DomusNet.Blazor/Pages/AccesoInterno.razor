@@ -95,19 +95,19 @@ cargando =true;
 
             if (rol == "administrador")
             {
-                Navigation.NavigateTo("/admin");
+                Navigation.NavigateTo("/admin", forceLoad: true );
             }
             else if (rol == "vendedor")
             {
-                Navigation.NavigateTo("/vendedor");
+                Navigation.NavigateTo("/vendedor", forceLoad: true );
             }
             else if (rol == "tecnico" || rol == "técnico")
             {
-                Navigation.NavigateTo("/tecnico");
+                Navigation.NavigateTo("/tecnico", forceLoad: true );
             }
             else
             {
-                Navigation.NavigateTo("/");
+                Navigation.NavigateTo("/", forceLoad: true );
             }
         }
         catch

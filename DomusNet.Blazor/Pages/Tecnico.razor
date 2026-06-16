@@ -1,13 +1,119 @@
 @page "/tecnico"
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
 
-<PageTitle>Panel Tecnico — DomusNet</PageTitle>
+<PageTitle>Panel Técnico — DomusNet</PageTitle>
 
-<section class="p-6">
-    <h1 class="text-3xl font-bold text-domus-text">
-        Panel de Tecnico
-    </h1>
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
 
-    <p class="text-domus-text-secondary mt-2">
-        Bienvenido al panel de gestión de instalaciones y tickets.
-    </p>
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Panel interno
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Gestión <span class="gradient-text">Técnica</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Bienvenido, @nombreUsuario
+                </p>
+            </div>
+
+            <div class="domus-card px-5 py-4">
+                <p class="text-xs text-domus-text-secondary uppercase tracking-wide">
+                    Sesión activa
+                </p>
+                <p class="text-domus-text font-semibold">
+                    Técnico
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="domus-card hover:border-cyan-500/50 transition-all duration-300">
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-6">
+                    <span class="text-2xl text-domus-cyan-light">🛠️</span>
+                </div>
+
+                <h2 class="text-2xl font-bold text-domus-text mb-2">
+                    Mis instalaciones
+                </h2>
+
+                <p class="text-domus-text-secondary text-sm mb-6">
+                    Ver instalaciones asignadas, subir evidencia y completar trabajos.
+                </p>
+
+                <button class="btn-primary-domus w-full justify-center"
+                        @onclick="IrInstalaciones">
+                    Entrar
+                </button>
+            </div>
+
+            <div class="domus-card hover:border-emerald-500/50 transition-all duration-300">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-6">
+                    <span class="text-2xl text-emerald-400">🎫</span>
+                </div>
+
+                <h2 class="text-2xl font-bold text-domus-text mb-2">
+                    Tickets y averías
+                </h2>
+
+                <p class="text-domus-text-secondary text-sm mb-6">
+                    Consultar averías, atender reportes técnicos y crear tickets globales.
+                </p>
+
+                <button class="btn-primary-domus w-full justify-center"
+                        @onclick="IrTickets">
+                    Entrar
+                </button>
+            </div>
+
+        </div>
+
+    </div>
 </section>
+
+@code {
+    private string nombreUsuario = "Técnico";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "token");
+        var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+        var nombre = await JS.InvokeAsync<string>("localStorage.getItem", "nombre");
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Navigation.NavigateTo("/acceso-interno", forceLoad: true);
+            return;
+        }
+
+        var rolNormalizado = rol?.Trim().ToLower();
+
+        if (rolNormalizado != "tecnico" && rolNormalizado != "técnico")
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(nombre))
+        {
+            nombreUsuario = nombre;
+        }
+    }
+
+    private void IrInstalaciones()
+    {
+        Navigation.NavigateTo("/tecnico/instalaciones");
+    }
+
+    private void IrTickets()
+    {
+        Navigation.NavigateTo("/tecnico/tickets");
+    }
+}

@@ -59,7 +59,7 @@ public class SolicitudesService
         }
 
         var resultado = await connection.QueryFirstOrDefaultAsync<SpResultDto>(
-            "convertirSolicitudEnCliente",
+            "dbo.convertirSolicitudEnCliente",
             new
             {
                 IdSolicitud = idSolicitud,

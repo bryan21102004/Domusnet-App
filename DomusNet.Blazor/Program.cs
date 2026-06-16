@@ -11,4 +11,10 @@ builder.Services.AddScoped(sp => new HttpClient {
      BaseAddress = new Uri("http://localhost:5242")});
 
 builder.Services.AddScoped<AuthFrontendService>();
+builder.Services.AddScoped<SolicitudesVendedorService>();
+builder.Services.AddScoped<PaquetesFrontendService>();
+builder.Services.AddScoped<SolicitudesPublicasService>();
+builder.Services.AddScoped<InstalacionesVendedorService>();
+builder.Services.AddScoped<TecnicoInstalacionesService>();
+
 await builder.Build().RunAsync();

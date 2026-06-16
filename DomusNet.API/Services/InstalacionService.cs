@@ -41,15 +41,18 @@ public class InstalacionService
         return resultado ?? new ResultadoOperacion { Resultado = -1, Mensaje = "No se obtuvo respuesta de la base de datos." };
     }
 
-    public async Task<IEnumerable<InstalacionProgramada>> ListarPorTecnicoAsync(int idTecnico)
-    {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<InstalacionProgramada>(
-            "listarInstalacionesPorTecnico",
-            new { IdTecnico = idTecnico },
-            commandType: CommandType.StoredProcedure);
-    }
+   public async Task<IEnumerable<InstalacionTecnicoResponse>> ListarPorTecnicoAsync(int idTecnico)
+{
+    using var connection = _context.CreateConnection();
 
+    return await connection.QueryAsync<InstalacionTecnicoResponse>(
+        "dbo.listarInstalacionesPorTecnico",
+        new 
+        { 
+            IdTecnico = idTecnico 
+        },
+        commandType: CommandType.StoredProcedure);
+}
     public async Task<ResultadoOperacion> CompletarInstalacionAsync(CompletarInstalacionRequest request)
     {
         using var connection = _context.CreateConnection();
@@ -66,4 +69,17 @@ public class InstalacionService
 
         return resultado ?? new ResultadoOperacion { Resultado = -1, Mensaje = "No se obtuvo respuesta de la base de datos." };
     }
+
+
+    public async Task<IEnumerable<InstalacionGeneralResponse>> ListarTodasAsync()
+{
+    using var connection = _context.CreateConnection();
+
+    var instalaciones = await connection.QueryAsync<InstalacionGeneralResponse>(
+        "dbo.listarInstalacionesGenerales",
+        commandType: CommandType.StoredProcedure
+    );
+
+    return instalaciones;
+}
 }

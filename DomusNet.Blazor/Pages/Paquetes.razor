@@ -1,143 +1,168 @@
 @page "/paquetes"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@inject PaquetesFrontendService PaquetesService
+@inject NavigationManager Navigation
 
 <PageTitle>Paquetes — DomusNet</PageTitle>
 
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-    <!-- Header -->
-    <div class="text-center mb-14 animate-fade-in-up">
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-domus-text mb-4">
-            Nuestros <span class="gradient-text">Paquetes</span>
-        </h1>
-        <p class="max-w-2xl mx-auto text-domus-text-secondary text-lg">
-            Elige el plan que mejor se adapte a las necesidades de tu hogar. Todos incluyen instalación y soporte técnico.
-        </p>
-    </div>
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-16">
+    <div class="max-w-7xl mx-auto">
 
-    <!-- Plans Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- Header -->
+        <div class="text-center mb-16">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-domus-text">
+                Nuestros <span class="gradient-text">Paquetes</span>
+            </h1>
 
-        <!-- Plan Económico -->
-        <div class="domus-card flex flex-col animate-fade-in-up stagger-1">
-            <div class="mb-6">
-                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-domus-cyan/10 text-domus-cyan uppercase tracking-wider">
-                    Económico
-                </span>
-            </div>
-            <h2 class="text-2xl font-bold text-domus-text mb-2">Plan Económico</h2>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">10/8</span>
-                <span class="text-domus-text-secondary text-sm">Mbps</span>
-            </div>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-2xl font-extrabold gradient-text">₡22,000</span>
-                <span class="text-domus-text-secondary text-sm">/mes</span>
-            </div>
-            <ul class="space-y-3 mb-8 flex-1">
-                <li class="flex items-center gap-3 text-domus-text-secondary text-sm">
-                    <svg class="w-5 h-5 text-domus-cyan flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    IVA 13% 1% cruz roja
-                </li>
-                
-            </ul>
-            <button class="btn-outline-domus w-full justify-center">
-                Solicitar
-            </button>
-        </div>
-        <!-- Plan Básico -->
-        <div class="domus-card flex flex-col animate-fade-in-up stagger-1">
-            <div class="mb-6">
-                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-domus-cyan/10 text-domus-cyan uppercase tracking-wider">
-                    Básico
-                </span>
-            </div>
-            <h2 class="text-2xl font-bold text-domus-text mb-2">Plan Básico</h2>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">15/10</span>
-                <span class="text-domus-text-secondary text-sm">Mbps</span>
-            </div>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-2xl font-extrabold gradient-text">₡25,000</span>
-                <span class="text-domus-text-secondary text-sm">/mes</span>
-            </div>
-            <ul class="space-y-3 mb-8 flex-1">
-                <li class="flex items-center gap-3 text-domus-text-secondary text-sm">
-                    <svg class="w-5 h-5 text-domus-cyan flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    IVA 13% 1% cruz roja
-                </li>
-                
-            </ul>
-            <button class="btn-outline-domus w-full justify-center">
-                Solicitar
-            </button>
+            <p class="text-domus-text-secondary text-lg mt-6 max-w-2xl mx-auto">
+                Elegí el plan que mejor se adapte a las necesidades de tu hogar.
+                Todos incluyen instalación y soporte técnico.
+            </p>
         </div>
 
-        <!-- Plan Regular -->
-        <div class="domus-card flex flex-col animate-fade-in-up stagger-3">
-            <div class="mb-6">
-                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-domus-cyan/10 text-domus-cyan uppercase tracking-wider">
-                    Regular
-                </span>
+        @if (cargando)
+        {
+            <div class="domus-card text-center py-12">
+                <p class="text-domus-text-secondary">
+                    Cargando paquetes disponibles...
+                </p>
             </div>
-            <h2 class="text-2xl font-bold text-domus-text mb-2">Plan Regular</h2>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">20/15</span>
-                <span class="text-domus-text-secondary text-sm">Mbps</span>
+        }
+        else if (!string.IsNullOrWhiteSpace(mensajeError))
+        {
+            <div class="p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300 text-center">
+                @mensajeError
             </div>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">₡29,900</span>
-                <span class="text-domus-text-secondary text-sm">/mes</span>
+        }
+        else if (!paquetes.Any())
+        {
+            <div class="domus-card text-center py-12">
+                <h2 class="text-2xl font-bold text-domus-text mb-2">
+                    No hay paquetes disponibles
+                </h2>
+                <p class="text-domus-text-secondary">
+                    Actualmente no hay paquetes activos para mostrar.
+                </p>
             </div>
-            <ul class="space-y-3 mb-8 flex-1">
-                <li class="flex items-center gap-3 text-domus-text-secondary text-sm">
-                    <svg class="w-5 h-5 text-domus-cyan flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    IVA 13% 1% cruz roja
-                </li>
-                
-            </ul>
-            <button class="btn-outline-domus w-full justify-center">
-                Solicitar
-            </button>
-        </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                @foreach (var paquete in paquetes)
+                {
+                    <div class="domus-card flex flex-col justify-between hover:border-cyan-500/40 transition-all duration-300">
 
-        <!-- Plan Profesional (Destacado) -->
-        <div class="domus-card flex flex-col relative border-domus-cyan/30 animate-pulse-glow animate-fade-in-up stagger-2">
-            
-            <div class="mb-6 mt-2">
-                <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-domus-green/10 text-domus-green uppercase tracking-wider">
-                    Profesional
-                </span>
-            </div>
-            <h2 class="text-2xl font-bold text-domus-text mb-2">Plan Profesional</h2>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">30/20</span>
-                <span class="text-domus-text-secondary text-sm">Mbps</span>
-            </div>
-            <div class="flex items-baseline gap-1 mb-6">
-                <span class="text-4xl font-extrabold gradient-text">₡41,000</span>
-                <span class="text-domus-text-secondary text-sm">/mes</span>
-            </div>
-            <ul class="space-y-3 mb-8 flex-1">
-                <li class="flex items-center gap-3 text-domus-text-secondary text-sm">
-                    <svg class="w-5 h-5 text-domus-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    IVA 13% 1% cruz roja
-                </li>
-                
-            </ul>
-            <button class="btn-primary-domus w-full justify-center">
-                Solicitar
-            </button>
-        </div>
+                        <div>
+                            <div class="mb-8">
+                                <span class="inline-flex text-xs px-3 py-1 rounded-full bg-cyan-500/10 text-domus-cyan-light font-bold tracking-wide">
+                                    @ObtenerEtiqueta(paquete)
+                                </span>
+                            </div>
 
-        
+                            <h2 class="text-2xl font-bold text-domus-text mb-6">
+                                @paquete.Nombre
+                            </h2>
+
+                            <div class="mb-8">
+                                <p class="text-5xl font-extrabold gradient-text">
+                                    @paquete.Velocidad
+                                    <span class="text-base font-medium text-domus-text-secondary">
+                                        Mbps
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="mb-8">
+                                <p class="text-4xl font-extrabold text-domus-cyan-light">
+                                    ₡@paquete.Precio.ToString("N0")
+                                    <span class="text-base font-medium text-domus-text-secondary">
+                                        /mes
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div class="space-y-3 mb-10">
+                                <div class="flex items-center gap-3 text-domus-text-secondary">
+                                    <span class="text-domus-cyan-light text-xl">✓</span>
+                                    <span>IVA 13% 1% cruz roja</span>
+                                </div>
+
+                                <div class="flex items-center gap-3 text-domus-text-secondary">
+                                    <span class="text-domus-cyan-light text-xl">✓</span>
+                                    <span>Soporte técnico incluido</span>
+                                </div>
+
+                                <div class="flex items-center gap-3 text-domus-text-secondary">
+                                    <span class="text-domus-cyan-light text-xl">✓</span>
+                                    <span>Instalación residencial</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="w-full px-5 py-3 rounded-lg border border-domus-cyan text-domus-cyan-light font-semibold hover:bg-domus-cyan hover:text-domus-dark transition-colors"
+                                @onclick="() => SolicitarPaquete(paquete.IdPaquete)">
+                            Solicitar
+                        </button>
+                    </div>
+                }
+            </div>
+        }
 
     </div>
 </section>
 
+@code {
+    private List<PaqueteResponse> paquetes = new();
+    private bool cargando = true;
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarPaquetes();
+    }
+
+    private async Task CargarPaquetes()
+    {
+        cargando = true;
+        mensajeError = string.Empty;
+
+        try
+        {
+            paquetes = await PaquetesService.ListarActivosAsync();
+
+            paquetes = paquetes
+                .OrderBy(p => p.IdPaquete)
+                .ToList();
+        }
+        catch
+        {
+            mensajeError = "No se pudieron cargar los paquetes. Verifique que la API esté activa.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private void SolicitarPaquete(int idPaquete)
+    {
+        Navigation.NavigateTo($"/solicitar-paquete/{idPaquete}");
+    }
+
+    private string ObtenerEtiqueta(PaqueteResponse paquete)
+    {
+        if (!string.IsNullOrWhiteSpace(paquete.Descripcion))
+        {
+            return paquete.Descripcion
+                .Replace("Internet", "")
+                .Trim()
+                .ToUpper();
+        }
+
+        return paquete.Nombre
+            .Replace("Plan", "")
+            .Trim()
+            .ToUpper();
+    }
+}

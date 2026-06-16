@@ -1,0 +1,400 @@
+@page "/vendedor/instalaciones/programar/{IdSolicitud:int}"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@using Microsoft.JSInterop
+@inject SolicitudesVendedorService SolicitudesService
+@inject InstalacionesVendedorService InstalacionesService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Programar instalación — DomusNet</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-5xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Panel vendedor
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Programar <span class="gradient-text">Instalación</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Asigná un técnico, fecha y ubicación para la instalación del servicio.
+                </p>
+            </div>
+
+            <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                    @onclick="VolverSolicitudes">
+                Volver
+            </button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="@claseMensaje mb-6">
+                @mensaje
+            </div>
+        }
+
+        @if (cargando)
+        {
+            <div class="domus-card text-center py-12">
+                <p class="text-domus-text-secondary">
+                    Cargando información de la solicitud...
+                </p>
+            </div>
+        }
+        else if (solicitud == null)
+        {
+            <div class="domus-card text-center py-12">
+                <h2 class="text-xl font-bold text-domus-text mb-2">
+                    Solicitud no encontrada
+                </h2>
+
+                <p class="text-domus-text-secondary">
+                    No se pudo cargar la solicitud seleccionada.
+                </p>
+
+                <button class="btn-primary-domus mt-6" @onclick="VolverSolicitudes">
+                    Volver a solicitudes
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <!-- Resumen de solicitud -->
+                <div class="domus-card lg:col-span-1">
+                    <span class="text-xs px-3 py-1 rounded-full border bg-cyan-500/10 text-cyan-300 border-cyan-500/30">
+                        @solicitud.Estado
+                    </span>
+
+                    <h2 class="text-2xl font-bold text-domus-text mt-5">
+                        @solicitud.NombreCompleto
+                    </h2>
+
+                    <div class="space-y-4 mt-6 text-sm">
+                        <div>
+                            <p class="text-domus-text-secondary">Solicitud</p>
+                            <p class="text-domus-text">#@solicitud.IdSolicitud</p>
+                        </div>
+
+                        <div>
+                            <p class="text-domus-text-secondary">Teléfono</p>
+                            <p class="text-domus-text">@solicitud.Telefono</p>
+                        </div>
+
+                        <div>
+                            <p class="text-domus-text-secondary">Correo</p>
+                            <p class="text-domus-text">@solicitud.Correo</p>
+                        </div>
+
+                        <div>
+                            <p class="text-domus-text-secondary">Paquete</p>
+                            <p class="text-domus-text">
+                                @(!string.IsNullOrWhiteSpace(solicitud.NombrePaquete) ? solicitud.NombrePaquete : "Sin asignar")
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="text-domus-text-secondary">Dirección</p>
+                            <p class="text-domus-text">@solicitud.Direccion</p>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(solicitud.Notas))
+                        {
+                            <div>
+                                <p class="text-domus-text-secondary">Notas actuales</p>
+                                <p class="text-domus-text">@solicitud.Notas</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Formulario -->
+                <div class="domus-card lg:col-span-2">
+                    <h2 class="text-2xl font-bold text-domus-text mb-2">
+                        Datos de programación
+                    </h2>
+
+                    <p class="text-domus-text-secondary mb-8">
+                        Completá los datos para crear la instalación programada.
+                    </p>
+
+                    <form class="space-y-5" @onsubmit="Programar" @onsubmit:preventDefault="true">
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Técnico asignado
+                            </label>
+
+                            <select @bind="form.IdTecnicoAsignado"
+                                    class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan">
+                                <option value="0">Seleccione un técnico</option>
+
+                                @foreach (var tecnico in tecnicos)
+                                {
+                                    <option value="@tecnico.IdUsuario">
+                                        @tecnico.Nombre
+                                    </option>
+                                }
+                            </select>
+
+                            @if (!tecnicos.Any())
+                            {
+                                <p class="text-xs text-yellow-300 mt-2">
+                                    No se encontraron técnicos activos.
+                                </p>
+                            }
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Fecha y hora programada
+                            </label>
+
+                            <input type="datetime-local"
+                                   @bind="form.FechaProgramada"
+                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Ubicación de instalación
+                            </label>
+
+                            <textarea @bind="form.UbicacionInstalacion"
+                                      rows="3"
+                                      placeholder="Dirección o referencia donde se realizará la instalación"
+                                      class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Notas del vendedor
+                            </label>
+
+                            <textarea @bind="form.NotasVendedor"
+                                      rows="3"
+                                      placeholder="Ej: llamar antes de llegar, cliente disponible en la tarde..."
+                                      class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"></textarea>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                            <button type="button"
+                                    class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                                    @onclick="VolverSolicitudes">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    disabled="@guardando"
+                                    class="btn-primary-domus flex-1 justify-center py-3 disabled:opacity-60 disabled:cursor-not-allowed">
+                                @(guardando ? "Programando instalación..." : "Programar instalación")
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        }
+
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public int IdSolicitud { get; set; }
+
+    private SolicitudServicioDto? solicitud;
+    private ProgramarInstalacionRequest form = new();
+
+    private List<TecnicoResponse> tecnicos = new();
+
+    private bool cargando = true;
+    private bool guardando = false;
+
+    private string mensaje = string.Empty;
+    private string claseMensaje = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sesionValida = await ValidarSesion();
+
+        if (!sesionValida)
+            return;
+
+        await CargarDatos();
+    }
+
+    private async Task<bool> ValidarSesion()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "token");
+        var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Navigation.NavigateTo("/acceso-interno", forceLoad: true);
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor")
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        mensaje = string.Empty;
+
+        try
+        {
+            var solicitudes = await SolicitudesService.ListarSolicitudesAsync();
+
+            solicitud = solicitudes.FirstOrDefault(s => s.IdSolicitud == IdSolicitud);
+
+            if (solicitud == null)
+            {
+                MostrarError("No se encontró la solicitud seleccionada.");
+                return;
+            }
+
+            var idVendedorTexto = await JS.InvokeAsync<string>("localStorage.getItem", "usuarioId");
+
+            if (!int.TryParse(idVendedorTexto, out var idVendedor))
+            {
+                MostrarError("No se pudo obtener el vendedor que programa la instalación.");
+                return;
+            }
+
+            form = new ProgramarInstalacionRequest
+            {
+                IdSolicitud = IdSolicitud,
+                IdVendedorPrograma = idVendedor,
+                FechaProgramada = DateTime.Now.AddDays(1),
+                UbicacionInstalacion = solicitud.Direccion,
+                NotasVendedor = solicitud.Notas
+            };
+
+            tecnicos = await InstalacionesService.ListarTecnicosActivosAsync();
+        }
+        catch
+        {
+            MostrarError("No se pudieron cargar los datos para programar la instalación.");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Programar()
+    {
+        mensaje = string.Empty;
+
+        if (solicitud == null)
+        {
+            MostrarError("No hay solicitud cargada.");
+            return;
+        }
+
+        if (!string.Equals(solicitud.Estado, "Atendida", StringComparison.OrdinalIgnoreCase))
+        {
+            MostrarError("Solo se pueden programar instalaciones de solicitudes atendidas.");
+            return;
+        }
+
+        if (form.IdTecnicoAsignado <= 0)
+        {
+            MostrarError("Debe seleccionar un técnico.");
+            return;
+        }
+
+        if (form.IdVendedorPrograma <= 0)
+        {
+            MostrarError("No se pudo obtener el vendedor que programa la instalación.");
+            return;
+        }
+
+        if (form.FechaProgramada <= DateTime.Now)
+        {
+            MostrarError("La fecha programada debe ser posterior a la fecha actual.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(form.UbicacionInstalacion))
+        {
+            MostrarError("Debe ingresar la ubicación de instalación.");
+            return;
+        }
+
+        guardando = true;
+
+        try
+        {
+            var resultado = await InstalacionesService.ProgramarInstalacionAsync(form);
+
+            if (resultado == null)
+            {
+                MostrarError("No se obtuvo respuesta del servidor.");
+                return;
+            }
+
+            if (resultado.Resultado == 1)
+            {
+                MostrarExito(
+                    string.IsNullOrWhiteSpace(resultado.Mensaje)
+                        ? "Instalación programada correctamente."
+                        : resultado.Mensaje
+                );
+
+                await Task.Delay(800);
+                Navigation.NavigateTo("/vendedor/solicitudes", forceLoad: true);
+            }
+            else
+            {
+                MostrarError(
+                    string.IsNullOrWhiteSpace(resultado.Mensaje)
+                        ? "No se pudo programar la instalación."
+                        : resultado.Mensaje
+                );
+            }
+        }
+        catch
+        {
+            MostrarError("No se pudo programar la instalación.");
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void VolverSolicitudes()
+    {
+        Navigation.NavigateTo("/vendedor/solicitudes");
+    }
+
+    private void MostrarExito(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    }
+
+    private void MostrarError(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+}

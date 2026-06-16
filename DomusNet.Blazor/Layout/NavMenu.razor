@@ -1,9 +1,15 @@
+@using Microsoft.JSInterop
+@using DomusNet.Blazor.Services
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AuthFrontendService AuthService
+
 <nav class="glass-nav fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
 
             <!-- Logo -->
-            <a href="" class="flex items-center gap-2 group no-underline">
+            <a href="@LogoHref" class="flex items-center gap-2 group no-underline">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
                         <svg class="w-5 h-5 text-domus-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -18,39 +24,71 @@
 
             <!-- Desktop Navigation -->
             <div class="hidden md:flex items-center gap-3">
-                
-                <NavLink class="nav-link-domus" href="" Match="NavLinkMatch.All">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                    </svg>
-                    Inicio
-                </NavLink>
-                <NavLink class="nav-link-domus" href="paquetes">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                    </svg>
-                    Paquetes
-                </NavLink>
-                <NavLink class="nav-link-domus" href="contacto">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                    Contacto
-                </NavLink>
-                <NavLink class="nav-link-domus" href="reportar-averia">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                    </svg>
-                    Reportar Avería
-                </NavLink>
 
-                <!-- Acceso Interno — Botón destacado -->
-                <NavLink class="btn-primary-domus ml-5 text-sm px-5 py-2.5" href="acceso-interno">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                    </svg>
-                    Acceso Interno
-                </NavLink>
+                @if (estaLogueado)
+                {
+                    <div class="flex items-center gap-3">
+                        <div class="text-right mr-2">
+                            <p class="text-sm font-semibold text-domus-text">
+                                @nombreUsuario
+                            </p>
+                            <p class="text-xs text-domus-text-secondary">
+                                @rolUsuario
+                            </p>
+                        </div>
+
+                        <NavLink class="nav-link-domus" href="@RutaPanel">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125C16.5 3.504 17.004 3 17.625 3h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                            </svg>
+                            Panel
+                        </NavLink>
+
+                        <button class="btn-primary-domus ml-3 text-sm px-5 py-2.5" @onclick="CerrarSesion">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M18 15l3-3m0 0l-3-3m3 3H9" />
+                            </svg>
+                            Cerrar sesión
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <NavLink class="nav-link-domus" href="" Match="NavLinkMatch.All">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                        </svg>
+                        Inicio
+                    </NavLink>
+
+                    <NavLink class="nav-link-domus" href="paquetes">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
+                        Paquetes
+                    </NavLink>
+
+                    <NavLink class="nav-link-domus" href="contacto">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                        Contacto
+                    </NavLink>
+
+                    <NavLink class="nav-link-domus" href="reportar-averia">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        Reportar Avería
+                    </NavLink>
+
+                    <NavLink class="btn-primary-domus ml-5 text-sm px-5 py-2.5" href="acceso-interno">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                        </svg>
+                        Acceso Interno
+                    </NavLink>
+                }
             </div>
 
             <!-- Mobile Menu Button -->
@@ -77,38 +115,71 @@
     {
         <div class="md:hidden glass border-t border-white/5 animate-fade-in">
             <div class="px-4 py-3 space-y-1">
-                <NavLink class="nav-link-mobile" href="" Match="NavLinkMatch.All" @onclick="ToggleNavMenu">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                    </svg>
-                    Inicio
-                </NavLink>
-                <NavLink class="nav-link-mobile" href="reportar-averia" @onclick="ToggleNavMenu">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                    </svg>
-                    Reportar Avería
-                </NavLink>
-                <NavLink class="nav-link-mobile" href="paquetes" @onclick="ToggleNavMenu">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                    </svg>
-                    Paquetes
-                </NavLink>
-                <NavLink class="nav-link-mobile" href="contacto" @onclick="ToggleNavMenu">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                    Contacto
-                </NavLink>
-                <div class="pt-2 pb-1">
-                    <NavLink class="btn-primary-domus w-full justify-center text-sm" href="acceso-interno" @onclick="ToggleNavMenu">
+
+                @if (estaLogueado)
+                {
+                    <div class="px-3 py-3 rounded-lg bg-domus-dark border border-domus-border mb-2">
+                        <p class="text-sm font-semibold text-domus-text">
+                            @nombreUsuario
+                        </p>
+                        <p class="text-xs text-domus-text-secondary">
+                            @rolUsuario
+                        </p>
+                    </div>
+
+                    <NavLink class="nav-link-mobile" href="@RutaPanel" @onclick="ToggleNavMenu">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125C16.5 3.504 17.004 3 17.625 3h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
                         </svg>
-                        Acceso Interno
+                        Panel
                     </NavLink>
-                </div>
+
+                    <button class="btn-primary-domus w-full justify-center text-sm mt-2" @onclick="CerrarSesion">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M18 15l3-3m0 0l-3-3m3 3H9" />
+                        </svg>
+                        Cerrar sesión
+                    </button>
+                }
+                else
+                {
+                    <NavLink class="nav-link-mobile" href="" Match="NavLinkMatch.All" @onclick="ToggleNavMenu">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                        </svg>
+                        Inicio
+                    </NavLink>
+
+                    <NavLink class="nav-link-mobile" href="reportar-averia" @onclick="ToggleNavMenu">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        Reportar Avería
+                    </NavLink>
+
+                    <NavLink class="nav-link-mobile" href="paquetes" @onclick="ToggleNavMenu">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
+                        Paquetes
+                    </NavLink>
+
+                    <NavLink class="nav-link-mobile" href="contacto" @onclick="ToggleNavMenu">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                        Contacto
+                    </NavLink>
+
+                    <div class="pt-2 pb-1">
+                        <NavLink class="btn-primary-domus w-full justify-center text-sm" href="acceso-interno" @onclick="ToggleNavMenu">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                            </svg>
+                            Acceso Interno
+                        </NavLink>
+                    </div>
+                }
             </div>
         </div>
     }
@@ -117,7 +188,70 @@
 @code {
     private bool collapseNavMenu = true;
 
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private bool estaLogueado = false;
+    private string nombreUsuario = "Usuario";
+    private string rolUsuario = "";
+    private string RutaPanel = "/";
+    private string LogoHref => estaLogueado ? RutaPanel : "/";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarSesionAsync();
+    }
+
+    private async Task CargarSesionAsync()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "token");
+        var nombre = await JS.InvokeAsync<string>("localStorage.getItem", "nombre");
+        var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+
+        estaLogueado = !string.IsNullOrWhiteSpace(token);
+
+        nombreUsuario = string.IsNullOrWhiteSpace(nombre)
+            ? "Usuario"
+            : nombre;
+
+        rolUsuario = string.IsNullOrWhiteSpace(rol)
+            ? ""
+            : rol;
+
+        RutaPanel = ObtenerRutaPanel(rolUsuario);
+    }
+
+    private string ObtenerRutaPanel(string rol)
+    {
+        var rolNormalizado = rol.Trim().ToLower();
+
+        if (rolNormalizado == "administrador")
+        {
+            return "/admin";
+        }
+
+        if (rolNormalizado == "vendedor")
+        {
+            return "/vendedor";
+        }
+
+        if (rolNormalizado == "tecnico" || rolNormalizado == "técnico")
+        {
+            return "/tecnico";
+        }
+
+        return "/";
+    }
+
+    private async Task CerrarSesion()
+    {
+        await AuthService.LogoutAsync();
+
+        estaLogueado = false;
+        nombreUsuario = "Usuario";
+        rolUsuario = "";
+        RutaPanel = "/";
+        collapseNavMenu = true;
+
+        Navigation.NavigateTo("/acceso-interno", forceLoad: true);
+    }
 
     private void ToggleNavMenu()
     {

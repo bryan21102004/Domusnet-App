@@ -1,0 +1,349 @@
+@page "/vendedor/solicitudes"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@using Microsoft.JSInterop
+@inject SolicitudesVendedorService SolicitudesService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Solicitudes — Vendedor</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Panel vendedor
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Solicitudes de <span class="gradient-text">Servicio</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Gestión de solicitudes recibidas para instalación de internet.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="VolverPanel">
+                    Volver
+                </button>
+
+                <button class="btn-primary-domus px-5 py-3" @onclick="CargarSolicitudes">
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Mensaje -->
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="@claseMensaje mb-6">
+                @mensaje
+            </div>
+        }
+
+        <!-- Filtros visuales -->
+        <div class="domus-card mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-domus-text">
+                        Listado de solicitudes
+                    </h2>
+                    <p class="text-sm text-domus-text-secondary mt-1">
+                        Total registradas: @solicitudesFiltradas.Count
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                            @bind="estadoFiltro">
+                        <option value="">Todas</option>
+                        <option value="Pendiente">Pendientes</option>
+                        <option value="Atendida">Atendidas</option>
+                        <option value="Programada">Programadas</option>
+                        <option value="Convertida">Convertidas</option>
+                        <option value="Cancelada">Canceladas</option>
+                    </select>
+
+                    <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
+                           placeholder="Buscar cliente..."
+                           @bind="busqueda" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        @if (cargando)
+        {
+            <div class="domus-card text-center py-12">
+                <p class="text-domus-text-secondary">
+                    Cargando solicitudes...
+                </p>
+            </div>
+        }
+        else if (!solicitudesFiltradas.Any())
+        {
+            <div class="domus-card text-center py-12">
+                <h3 class="text-xl font-bold text-domus-text mb-2">
+                    No hay solicitudes para mostrar
+                </h3>
+                <p class="text-domus-text-secondary">
+                    Probá actualizar o cambiar el filtro de estado.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 gap-5">
+                @foreach (var solicitud in solicitudesFiltradas)
+                {
+                    <div class="domus-card hover:border-cyan-500/40 transition-all duration-300">
+                        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+
+                            <div class="flex-1">
+                                <div class="flex flex-wrap items-center gap-3 mb-3">
+                                    <span class="text-xs px-3 py-1 rounded-full border @ObtenerClaseEstado(solicitud.Estado)">
+                                        @solicitud.Estado
+                                    </span>
+
+                                    <span class="text-xs text-domus-text-secondary">
+                                        Solicitud #@solicitud.IdSolicitud
+                                    </span>
+
+                                    <span class="text-xs text-domus-text-secondary">
+                                        @solicitud.FechaSolicitud.ToString("dd/MM/yyyy")
+                                    </span>
+                                </div>
+
+                                <h2 class="text-xl font-bold text-domus-text">
+                                    @solicitud.NombreCompleto
+                                </h2>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm">
+                                    <div>
+                                        <p class="text-domus-text-secondary">Teléfono</p>
+                                        <p class="text-domus-text">@solicitud.Telefono</p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-domus-text-secondary">Correo</p>
+                                        <p class="text-domus-text">@solicitud.Correo</p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-domus-text-secondary">Paquete</p>
+                                        <p class="text-domus-text">@(!string.IsNullOrWhiteSpace(solicitud.NombrePaquete) ? solicitud.NombrePaquete : "Sin asignar")</p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-domus-text-secondary">Dirección</p>
+                                        <p class="text-domus-text">@solicitud.Direccion</p>
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(solicitud.Notas))
+                                {
+                                    <div class="mt-4 p-3 rounded-lg bg-domus-dark border border-domus-border">
+                                        <p class="text-xs text-domus-text-secondary mb-1">Notas</p>
+                                        <p class="text-sm text-domus-text">@solicitud.Notas</p>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="flex flex-col gap-3 lg:w-56">
+                                @if (solicitud.Estado?.Equals("Pendiente", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <button class="btn-primary-domus w-full justify-center"
+                                            @onclick="() => AtenderSolicitud(solicitud.IdSolicitud)">
+                                        Atender
+                                    </button>
+                                }
+
+                                @if (solicitud.Estado?.Equals("Atendida", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <button class="btn-primary-domus w-full justify-center"
+                                            @onclick="() => ProgramarInstalacion(solicitud.IdSolicitud)">
+                                        Programar instalación
+                                    </button>
+                                }
+
+                                @if (solicitud.Estado?.Equals("Programada", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <button class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                                            @onclick="() => IrInstalaciones()">
+                                        Ver instalación
+                                    </button>
+                                }
+
+                                @if (solicitud.Estado?.Equals("Convertida", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <button class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                                            @onclick="() => IrClientes()">
+                                        Ver cliente
+                                    </button>
+                                }
+                            </div>
+
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+</section>
+
+@code {
+    private List<SolicitudServicioDto> solicitudes = new();
+
+    private string busqueda = string.Empty;
+    private string estadoFiltro = string.Empty;
+    private string mensaje = string.Empty;
+    private string claseMensaje = string.Empty;
+    private bool cargando = false;
+
+    private List<SolicitudServicioDto> solicitudesFiltradas =>
+        solicitudes
+            .Where(s =>
+                string.IsNullOrWhiteSpace(estadoFiltro) ||
+                string.Equals(s.Estado, estadoFiltro, StringComparison.OrdinalIgnoreCase))
+            .Where(s =>
+                string.IsNullOrWhiteSpace(busqueda) ||
+                (s.NombreCompleto?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (s.Telefono?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (s.Correo?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderByDescending(s => s.FechaSolicitud)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "token");
+        var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Navigation.NavigateTo("/acceso-interno", forceLoad: true);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor")
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        await CargarSolicitudes();
+    }
+
+    private async Task CargarSolicitudes()
+    {
+        cargando = true;
+        mensaje = string.Empty;
+
+        try
+        {
+            solicitudes = await SolicitudesService.ListarSolicitudesAsync();
+        }
+        catch
+        {
+            MostrarError("No se pudieron cargar las solicitudes.");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+private async Task AtenderSolicitud(int idSolicitud)
+{
+    var idVendedorTexto = await JS.InvokeAsync<string>("localStorage.getItem", "usuarioId");
+
+    if (!int.TryParse(idVendedorTexto, out var idVendedor))
+    {
+        MostrarError("No se pudo obtener el usuario vendedor.");
+        return;
+    }
+
+    var request = new AtenderSolicitudRequest
+    {
+        IdVendedorAsignado = idVendedor,
+        Notas = "Solicitud atendida por el vendedor."
+    };
+
+    var resultado = await SolicitudesService.AtenderSolicitudAsync(idSolicitud, request);
+
+    if (resultado == null)
+    {
+        MostrarError("No se obtuvo respuesta del servidor.");
+        return;
+    }
+
+    var solicitud = solicitudes.FirstOrDefault(s => s.IdSolicitud == idSolicitud);
+
+    if (solicitud != null)
+    {
+        solicitud.Estado = "Atendida";
+        solicitud.Notas = request.Notas;
+    }
+
+    MostrarExito(
+        string.IsNullOrWhiteSpace(resultado.Mensaje)
+            ? "Solicitud atendida correctamente."
+            : resultado.Mensaje
+    );
+
+    StateHasChanged();
+}
+
+    private void ProgramarInstalacion(int idSolicitud)
+    {
+        Navigation.NavigateTo($"/vendedor/instalaciones/programar/{idSolicitud}", forceLoad: true);
+    }
+
+    private void IrInstalaciones()
+    {
+        Navigation.NavigateTo("/vendedor/instalaciones", forceLoad: true);
+    }
+
+    private void IrClientes()
+    {
+        Navigation.NavigateTo("/vendedor/clientes", forceLoad: true);
+    }
+
+    private void VolverPanel()
+    {
+        Navigation.NavigateTo("/vendedor");
+    }
+
+    private void MostrarExito(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    }
+
+    private void MostrarError(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private string ObtenerClaseEstado(string? estado)
+    {
+        var estadoNormalizado = estado?.Trim().ToLower();
+
+        return estadoNormalizado switch
+        {
+            "pendiente" => "bg-yellow-500/10 text-yellow-300 border-yellow-500/30",
+            "atendida" => "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
+            "programada" => "bg-blue-500/10 text-blue-300 border-blue-500/30",
+            "convertida" => "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+            "cancelada" => "bg-red-500/10 text-red-300 border-red-500/30",
+            _ => "bg-white/5 text-domus-text-secondary border-domus-border"
+        };
+    }
+}

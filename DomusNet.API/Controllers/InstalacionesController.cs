@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DomusNet.API.Models;
 using DomusNet.API.Services;
-
+using Microsoft.AspNetCore.Authorization;
 namespace DomusNet.API.Controllers;
 
 [ApiController]
@@ -16,6 +16,7 @@ public class InstalacionesController : ControllerBase
     }
 
     [HttpGet("tecnicos")]
+    [Authorize(Roles = "Administrador,Vendedor")]
     public async Task<IActionResult> ListarTecnicos()
     {
         var tecnicos = await _instalacionService.ListarTecnicosActivosAsync();
@@ -54,4 +55,11 @@ public class InstalacionesController : ControllerBase
 
         return BadRequest(resultado);
     }
+[HttpGet]
+[Authorize(Roles = "Administrador,Vendedor")]
+public async Task<IActionResult> ListarTodas()
+{
+    var instalaciones = await _instalacionService.ListarTodasAsync();
+    return Ok(instalaciones);
+}
 }
