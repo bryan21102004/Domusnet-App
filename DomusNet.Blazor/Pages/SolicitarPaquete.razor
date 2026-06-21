@@ -4,6 +4,7 @@
 @inject PaquetesFrontendService PaquetesService
 @inject SolicitudesPublicasService SolicitudesService
 @inject NavigationManager Navigation
+@inject ToastService Toast
 
 <PageTitle>Solicitar paquete — DomusNet</PageTitle>
 
@@ -19,7 +20,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            <!-- Resumen del paquete -->
+           
             <div class="domus-card lg:col-span-1">
                 <p class="text-sm text-domus-cyan-light font-semibold mb-2">
                     Paquete seleccionado
@@ -126,12 +127,6 @@
                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors"></textarea>
                     </div>
 
-                    @if (!string.IsNullOrWhiteSpace(mensaje))
-                    {
-                        <div class="@claseMensaje">
-                            @mensaje
-                        </div>
-                    }
 
                     <button type="submit"
                             disabled="@enviando"
@@ -155,6 +150,8 @@
     private bool cargandoPaquete = true;
     private bool enviando = false;
 
+    // Las dejo para que no te dé error si todavía tenés el bloque viejo en el HTML.
+    // Pero ya no las vamos a usar para mostrar mensajes.
     private string mensaje = string.Empty;
     private string claseMensaje = string.Empty;
 
@@ -165,11 +162,15 @@
         try
         {
             paquete = await PaquetesService.BuscarAsync(IdPaquete);
+
+            if (paquete == null)
+            {
+                Toast.Error("No se encontró el paquete seleccionado.");
+            }
         }
         catch
         {
-            mensaje = "No se pudo cargar la información del paquete.";
-            claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+            Toast.Error("No se pudo cargar la información del paquete.");
         }
         finally
         {
@@ -183,15 +184,25 @@
 
         if (paquete == null)
         {
-            MostrarError("No se puede enviar la solicitud porque el paquete no existe.");
+            Toast.Error("No se puede enviar la solicitud porque el paquete no existe.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(solicitud.NombreCompleto) ||
-            string.IsNullOrWhiteSpace(solicitud.Telefono) ||
-            string.IsNullOrWhiteSpace(solicitud.Direccion))
+        if (string.IsNullOrWhiteSpace(solicitud.NombreCompleto))
         {
-            MostrarError("Debe ingresar nombre, teléfono y dirección.");
+            Toast.Warning("Debe ingresar el nombre completo.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(solicitud.Telefono))
+        {
+            Toast.Warning("Debe ingresar el teléfono.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(solicitud.Direccion))
+        {
+            Toast.Warning("Debe ingresar la dirección.");
             return;
         }
 
@@ -205,27 +216,28 @@
 
             if (resultado == null)
             {
-                MostrarError("No se obtuvo respuesta del servidor.");
+                Toast.Error("No se obtuvo respuesta del servidor.");
                 return;
             }
 
-            if (resultado.Resultado == 1)
-            {
-                MostrarExito("Solicitud enviada correctamente. DomusNet se pondrá en contacto contigo.");
+          if (resultado.Resultado == 1 || 
+    resultado.Mensaje.Contains("correctamente", StringComparison.OrdinalIgnoreCase))
+{
+    Toast.Success(resultado.Mensaje);
 
-                solicitud = new SolicitudPaqueteRequest
-                {
-                    IdPaquete = IdPaquete
-                };
-            }
-            else
-            {
-                MostrarError(resultado.Mensaje);
-            }
+    solicitud = new SolicitudPaqueteRequest
+    {
+        IdPaquete = IdPaquete
+    };
+}
+else
+{
+    Toast.Error(resultado.Mensaje);
+}
         }
         catch
         {
-            MostrarError("No se pudo enviar la solicitud. Verifique que la API esté activa.");
+            Toast.Error("No se pudo enviar la solicitud. Verifique que la API esté activa.");
         }
         finally
         {
@@ -240,13 +252,11 @@
 
     private void MostrarExito(string texto)
     {
-        mensaje = texto;
-        claseMensaje = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+        Toast.Success(texto);
     }
 
     private void MostrarError(string texto)
     {
-        mensaje = texto;
-        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+        Toast.Error(texto);
     }
 }

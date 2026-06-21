@@ -1,11 +1,13 @@
 using DomusNet.API.Models;
 using DomusNet.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DomusNet.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Administrador")]
 public class IngresosController : ControllerBase
 {
     private readonly IngresosService _ingresosService;
@@ -15,10 +17,18 @@ public class IngresosController : ControllerBase
         _ingresosService = ingresosService;
     }
 
+    [HttpGet("clientes")]
+    public async Task<IActionResult> ListarClientesParaIngreso()
+    {
+        var clientes = await _ingresosService.ListarClientesParaIngresoAsync();
+        return Ok(clientes);
+    }
+
     [HttpPost("registrar")]
+    [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> RegistrarIngreso([FromBody] RegistrarIngresoRequest request)
     {
-        var resultado = await _ingresosService.RegistrarIngresoAsync(request);
+        var resultado = await _ingresosService.RegistrarIngresoClienteAsync(request);
 
         if (resultado.Resultado == 1)
         {
@@ -29,21 +39,9 @@ public class IngresosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> ListarIngresos(
-        [FromQuery] int? mes,
-        [FromQuery] int? anio,
-        [FromQuery] string? quincena,
-        [FromQuery] string? estado)
+    public async Task<IActionResult> ListarIngresos()
     {
-        var ingresos = await _ingresosService.ListarIngresosAsync(
-            mes,
-            anio,
-            quincena,
-            estado
-        );
-
+        var ingresos = await _ingresosService.ListarIngresosAsync();
         return Ok(ingresos);
     }
-
-   
 }

@@ -1,4 +1,4 @@
-namespace DomusNet.API.Models;
+namespace DomusNet.Blazor.Models;
 
 public class RegistrarIngresoRequest
 {

@@ -244,7 +244,7 @@
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor")
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor" && rol.Trim().ToLower() != "administrador")
         {
             Navigation.NavigateTo("/", forceLoad: true);
             return false;

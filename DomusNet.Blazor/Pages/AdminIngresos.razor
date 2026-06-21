@@ -1,0 +1,663 @@
+@page "/admin/ingresos"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@inject AdminIngresosService IngresosService
+@inject NavigationManager Navigation
+<PageTitle>Ingresos — Administrador</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Encabezado -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Módulo financiero
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Registro de <span class="gradient-text">Ingresos</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Registrá pagos de clientes, método de pago y próxima fecha de vencimiento.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="VolverPanel">
+                    Volver
+                </button>
+
+                <button class="btn-primary-domus px-5 py-3"
+                        @onclick="CargarDatos">
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="@claseMensaje mb-6">
+                @mensaje
+            </div>
+        }
+
+        <!-- Resumen -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">
+                    Clientes disponibles para pago
+                </p>
+
+                <p class="text-3xl font-extrabold text-domus-text mt-2">
+                    @clientes.Count
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">
+                    Pagos registrados
+                </p>
+
+                <p class="text-3xl font-extrabold text-cyan-300 mt-2">
+                    @ingresos.Count
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">
+                    Total registrado
+                </p>
+
+                <p class="text-3xl font-extrabold text-emerald-300 mt-2">
+                    ₡@ingresos.Sum(i => i.Monto).ToString("N0")
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+            <!-- Formulario -->
+            <div class="xl:col-span-1">
+                <div class="domus-card sticky top-24">
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-bold text-domus-text">
+                            Registrar pago
+                        </h2>
+
+                        <p class="text-sm text-domus-text-secondary mt-1">
+                            Seleccioná un cliente pendiente y registrá el ingreso recibido.
+                        </p>
+                    </div>
+
+                    <div class="space-y-5">
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Cliente
+                            </label>
+
+                            <select class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                                    value="@idClienteSeleccionado"
+                                    @onchange="SeleccionarCliente">
+                                <option value="0">Seleccione un cliente</option>
+
+                                @foreach (var cliente in clientes)
+                                {
+                                    <option value="@cliente.IdCliente">
+                                        @cliente.NombreCompleto - @cliente.NombrePaquete
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        @if (ClienteSeleccionado is not null)
+                        {
+                            <div class="p-4 rounded-xl bg-domus-dark border border-domus-border space-y-4">
+                                <div>
+                                    <p class="text-xs text-domus-text-secondary">
+                                        Cliente seleccionado
+                                    </p>
+
+                                    <p class="text-lg font-bold text-domus-text">
+                                        @ClienteSeleccionado.NombreCompleto
+                                    </p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3 text-sm">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-domus-text-secondary">
+                                            Paquete
+                                        </p>
+
+                                        <p class="text-domus-text font-semibold text-right">
+                                            @ClienteSeleccionado.NombrePaquete
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-domus-text-secondary">
+                                            Velocidad
+                                        </p>
+
+                                        <p class="text-domus-cyan-light font-semibold text-right">
+                                            @ObtenerTexto(ClienteSeleccionado.Velocidad, "Sin velocidad")
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-domus-text-secondary">
+                                            Precio mensual
+                                        </p>
+
+                                        <p class="text-emerald-300 font-bold text-right">
+                                            ₡@ClienteSeleccionado.Precio.ToString("N0")
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-domus-text-secondary">
+                                            Vence actualmente
+                                        </p>
+
+                                        <p class="text-domus-text font-semibold text-right">
+                                            @(ClienteSeleccionado.FechaVencimiento.HasValue
+                                                ? ClienteSeleccionado.FechaVencimiento.Value.ToString("dd/MM/yyyy")
+                                                : "Sin fecha")
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-domus-text-secondary">
+                                            Estado de pago
+                                        </p>
+
+                                        <span class="inline-flex text-xs px-3 py-1 rounded-full border @ObtenerClaseEstadoPago(ClienteSeleccionado.EstadoPago)">
+                                            @ClienteSeleccionado.EstadoPago
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Monto pagado
+                            </label>
+
+                            <input type="number"
+                                   min="0"
+                                   step="100"
+                                   @bind="form.Monto"
+                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
+                                   placeholder="Ej: 15000" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Método de pago
+                            </label>
+
+                            <select class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                                    @bind="form.MetodoPago">
+                                <option value="">Seleccione método</option>
+                                <option value="SINPE">SINPE</option>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Referencia
+                            </label>
+
+                            <input type="text"
+                                   @bind="form.ReferenciaPago"
+                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
+                                   placeholder="Número de comprobante o SINPE" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">
+                                Descripción
+                            </label>
+
+                            <textarea rows="3"
+                                      @bind="form.Descripcion"
+                                      class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
+                                      placeholder="Ej: Pago mensual de internet"></textarea>
+                        </div>
+
+                        <button class="btn-primary-domus w-full justify-center"
+                                disabled="@guardando"
+                                @onclick="RegistrarIngreso">
+                            @(guardando ? "Guardando..." : "Guardar ingreso")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de pagos -->
+            <div class="xl:col-span-2">
+                <div class="domus-card mb-5">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-domus-text">
+                                Historial de pagos
+                            </h2>
+
+                            <p class="text-sm text-domus-text-secondary mt-1">
+                                Consulta ordenada de pagos, estado financiero del cliente y próxima fecha de vencimiento.
+                            </p>
+                        </div>
+
+                        <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan min-w-[260px]"
+                               placeholder="Buscar cliente, paquete, método o referencia..."
+                               @bind="busqueda" />
+                    </div>
+                </div>
+
+                @if (cargando)
+                {
+                    <div class="domus-card text-center py-12">
+                        <p class="text-domus-text-secondary">
+                            Cargando historial de pagos...
+                        </p>
+                    </div>
+                }
+                else if (!ingresosFiltrados.Any())
+                {
+                    <div class="domus-card text-center py-12">
+                        <h3 class="text-xl font-bold text-domus-text mb-2">
+                            No hay pagos registrados
+                        </h3>
+
+                        <p class="text-domus-text-secondary">
+                            Cuando registres ingresos, aparecerán en esta tabla.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="domus-card overflow-hidden p-0">
+
+                        <!-- Resumen interno -->
+                        <div class="px-6 py-5 border-b border-domus-border bg-domus-dark/40">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div>
+                                    <h3 class="text-xl font-bold text-domus-text">
+                                        Pagos registrados
+                                    </h3>
+
+                                    <p class="text-sm text-domus-text-secondary mt-1">
+                                        Mostrando @ingresosFiltrados.Count pago(s) de @ingresos.Count registrado(s).
+                                    </p>
+                                </div>
+
+                                <div class="text-right">
+                                    <p class="text-xs text-domus-text-secondary">
+                                        Total filtrado
+                                    </p>
+
+                                    <p class="text-lg font-extrabold text-emerald-300">
+                                        ₡@ingresosFiltrados.Sum(i => i.Monto).ToString("N0")
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1250px] text-sm">
+                                <thead class="bg-domus-dark border-b border-domus-border">
+                                    <tr class="text-left">
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Pago
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Cliente
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Estado pago
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Paquete
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Monto
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Método
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Fecha pago
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Próximo pago
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Referencia
+                                        </th>
+
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
+                                            Registrado por
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody class="divide-y divide-domus-border">
+                                    @foreach (var ingreso in ingresosFiltrados)
+                                    {
+                                        <tr class="hover:bg-white/[0.03] transition-colors">
+
+                                            <!-- Pago -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="font-bold text-domus-text">
+                                                    #@ingreso.IdIngreso
+                                                </p>
+
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    @ObtenerTexto(ingreso.TipoIngreso, "Mensualidad")
+                                                </p>
+
+                                                <span class="inline-flex mt-2 items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                                                    @ObtenerTexto(ingreso.Estado, "Registrado")
+                                                </span>
+                                            </td>
+
+                                            <!-- Cliente -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="font-bold text-domus-text">
+                                                    @ObtenerTexto(ingreso.NombreCliente, "Cliente no especificado")
+                                                </p>
+
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    Cliente @(ingreso.IdCliente.HasValue ? $"#{ingreso.IdCliente}" : "sin ID")
+                                                </p>
+                                            </td>
+
+                                            <!-- Estado de pago -->
+                                            <td class="px-5 py-5 align-top">
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border @ObtenerClaseEstadoPago(ingreso.EstadoPago)">
+                                                    @ObtenerTexto(ingreso.EstadoPago, "Sin estado")
+                                                </span>
+
+                                                <p class="text-xs text-domus-text-secondary mt-2">
+                                                    Estado actual del cliente
+                                                </p>
+                                            </td>
+
+                                            <!-- Paquete -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="font-semibold text-domus-text">
+                                                    @ObtenerTexto(ingreso.NombrePaquete, "Sin paquete")
+                                                </p>
+
+                                                <p class="text-xs text-domus-cyan-light mt-1">
+                                                    @ObtenerTexto(ingreso.Velocidad, "Sin velocidad")
+                                                </p>
+                                            </td>
+
+                                            <!-- Monto -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="font-extrabold text-emerald-300">
+                                                    ₡@ingreso.Monto.ToString("N0")
+                                                </p>
+                                            </td>
+
+                                            <!-- Método -->
+                                            <td class="px-5 py-5 align-top">
+                                                <span class="inline-flex px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-domus-cyan-light text-xs font-semibold">
+                                                    @ObtenerTexto(ingreso.MetodoPago, "Sin método")
+                                                </span>
+                                            </td>
+
+                                            <!-- Fecha pago -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="text-domus-text font-semibold">
+                                                    @ingreso.Fecha.ToString("dd/MM/yyyy")
+                                                </p>
+
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    @ingreso.Fecha.ToString("hh:mm tt")
+                                                </p>
+                                            </td>
+
+                                            <!-- Próximo pago -->
+                                            <td class="px-5 py-5 align-top">
+                                                @if (ingreso.FechaProximoPago.HasValue)
+                                                {
+                                                    <p class="text-domus-cyan-light font-semibold">
+                                                        @ingreso.FechaProximoPago.Value.ToString("dd/MM/yyyy")
+                                                    </p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="text-domus-text-secondary">
+                                                        Sin fecha
+                                                    </p>
+                                                }
+                                            </td>
+
+                                            <!-- Referencia -->
+                                            <td class="px-5 py-5 align-top max-w-[200px]">
+                                                <p class="text-domus-text-secondary break-all">
+                                                    @ObtenerTexto(ingreso.ReferenciaPago, "Sin referencia")
+                                                </p>
+
+                                                @if (!string.IsNullOrWhiteSpace(ingreso.Descripcion))
+                                                {
+                                                    <p class="text-xs text-domus-text-secondary mt-2">
+                                                        @ingreso.Descripcion
+                                                    </p>
+                                                }
+                                            </td>
+
+                                            <!-- Registrado por -->
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="text-domus-text font-semibold">
+                                                    @ObtenerTexto(ingreso.NombreRegistradoPor, "Sin usuario")
+                                                </p>
+
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    Usuario encargado
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-6 py-4 border-t border-domus-border bg-domus-dark/30">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                                
+
+                                <p class="text-sm text-domus-text-secondary">
+                                    Total visible:
+                                    <span class="font-bold text-emerald-300">
+                                        ₡@ingresosFiltrados.Sum(i => i.Monto).ToString("N0")
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+@code {
+    private List<ClienteIngresoResponse> clientes = new();
+    private List<IngresoResponse> ingresos = new();
+
+    private RegistrarIngresoRequest form = new();
+
+    private int idClienteSeleccionado;
+    private string busqueda = string.Empty;
+
+    private bool cargando = true;
+    private bool guardando = false;
+
+    private string mensaje = string.Empty;
+    private string claseMensaje = string.Empty;
+
+    private ClienteIngresoResponse? ClienteSeleccionado =>
+        clientes.FirstOrDefault(c => c.IdCliente == idClienteSeleccionado);
+
+    private List<IngresoResponse> ingresosFiltrados =>
+        ingresos
+            .Where(i =>
+                string.IsNullOrWhiteSpace(busqueda) ||
+                (i.NombreCliente ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                (i.NombrePaquete ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                (i.MetodoPago ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                (i.ReferenciaPago ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        mensaje = string.Empty;
+
+        clientes = await IngresosService.ListarClientesParaIngresoAsync();
+        ingresos = await IngresosService.ListarIngresosAsync();
+
+        cargando = false;
+    }
+
+    private void SeleccionarCliente(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var idCliente))
+        {
+            idClienteSeleccionado = idCliente;
+            form.IdCliente = idCliente;
+
+            var cliente = ClienteSeleccionado;
+
+            if (cliente is not null)
+            {
+                form.Monto = cliente.Precio;
+                form.Descripcion = "Pago mensual de servicio";
+            }
+        }
+    }
+
+    private async Task RegistrarIngreso()
+    {
+        mensaje = string.Empty;
+
+        if (idClienteSeleccionado <= 0)
+        {
+            MostrarError("Debe seleccionar un cliente.");
+            return;
+        }
+
+        if (form.Monto <= 0)
+        {
+            MostrarError("El monto debe ser mayor a cero.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(form.MetodoPago))
+        {
+            MostrarError("Debe seleccionar un método de pago.");
+            return;
+        }
+
+        var idUsuario = await IngresosService.ObtenerIdUsuarioAsync();
+
+        if (idUsuario <= 0)
+        {
+            MostrarError("No se pudo obtener el usuario administrador.");
+            return;
+        }
+
+        guardando = true;
+
+        form.IdCliente = idClienteSeleccionado;
+        form.IdRegistradoPor = idUsuario;
+
+        var resultado = await IngresosService.RegistrarIngresoAsync(form);
+
+        guardando = false;
+
+        if (resultado is null)
+        {
+            MostrarError("No se obtuvo respuesta del servidor.");
+            return;
+        }
+
+        if (resultado.Resultado == 1)
+        {
+            MostrarExito(resultado.Mensaje);
+
+            LimpiarFormulario();
+            await CargarDatos();
+        }
+        else
+        {
+            MostrarError(resultado.Mensaje);
+        }
+    }
+
+    private void LimpiarFormulario()
+    {
+        form = new RegistrarIngresoRequest();
+        idClienteSeleccionado = 0;
+    }
+
+    private void MostrarExito(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    }
+
+    private void MostrarError(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private string ObtenerTexto(string? valor, string alternativo)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? alternativo : valor;
+    }
+
+    private string ObtenerClaseEstadoPago(string? estado)
+    {
+        return estado?.ToLower() switch
+        {
+            "aldia" => "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+            "moroso" => "bg-red-500/10 text-red-300 border-red-500/30",
+            "pendiente" => "bg-yellow-500/10 text-yellow-300 border-yellow-500/30",
+            _ => "bg-domus-dark text-domus-text-secondary border-domus-border"
+        };
+    }
+
+    private void VolverPanel()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+}

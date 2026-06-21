@@ -2,9 +2,11 @@
 @using DomusNet.Blazor.Models
 @using DomusNet.Blazor.Services
 @using Microsoft.JSInterop
+@inject AuthFrontendService AuthService
+@inject NavigationManager Navigation
 @inject SolicitudesVendedorService SolicitudesService
 @inject IJSRuntime JS
-@inject NavigationManager Navigation
+
 
 <PageTitle>Solicitudes — Vendedor</PageTitle>
 
@@ -14,24 +16,20 @@
         <!-- Header -->
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
             <div>
-                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
-                    Panel vendedor
-                </p>
+               
 
                 <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
-                    Solicitudes de <span class="gradient-text">Servicio</span>
+                    Solicitudes <span class="gradient-text">recibidas</span>
                 </h1>
 
-                <p class="text-domus-text-secondary mt-2">
-                    Gestión de solicitudes recibidas para instalación de internet.
-                </p>
+              
             </div>
 
             <div class="flex gap-3">
-                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
-                        @onclick="VolverPanel">
-                    Volver
-                </button>
+              <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+        @onclick="VolverPanel">
+    Volver
+</button>
 
                 <button class="btn-primary-domus px-5 py-3" @onclick="CargarSolicitudes">
                     Actualizar
@@ -67,7 +65,7 @@
                         <option value="Atendida">Atendidas</option>
                         <option value="Programada">Programadas</option>
                         <option value="Convertida">Convertidas</option>
-                        <option value="Cancelada">Canceladas</option>
+                      
                     </select>
 
                     <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
@@ -231,7 +229,7 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor")
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor" && rol.Trim().ToLower() != "administrador")
         {
             Navigation.NavigateTo("/", forceLoad: true);
             return;
@@ -315,10 +313,23 @@ private async Task AtenderSolicitud(int idSolicitud)
         Navigation.NavigateTo("/vendedor/clientes", forceLoad: true);
     }
 
-    private void VolverPanel()
+   private async Task VolverPanel()
+{
+    var rol = await AuthService.ObtenerRolAsync();
+
+    if (rol == "Administrador")
+    {
+        Navigation.NavigateTo("/admin");
+    }
+    else if (rol == "Vendedor")
     {
         Navigation.NavigateTo("/vendedor");
     }
+    else
+    {
+        Navigation.NavigateTo("/");
+    }
+}
 
     private void MostrarExito(string texto)
     {
@@ -346,4 +357,5 @@ private async Task AtenderSolicitud(int idSolicitud)
             _ => "bg-white/5 text-domus-text-secondary border-domus-border"
         };
     }
+    
 }

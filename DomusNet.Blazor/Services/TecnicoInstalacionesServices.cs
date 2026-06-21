@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using DomusNet.Blazor.Models;
+using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 
 namespace DomusNet.Blazor.Services;
@@ -71,4 +73,35 @@ public class TecnicoInstalacionesService
                 PropertyNameCaseInsensitive = true
             });
     }
+public async Task<string?> SubirEvidenciaAsync(IBrowserFile archivo)
+{
+    await AgregarTokenAsync();
+
+    using var contenido = new MultipartFormDataContent();
+
+    await using var stream = archivo.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+
+    var archivoContent = new StreamContent(stream);
+    archivoContent.Headers.ContentType = new MediaTypeHeaderValue(archivo.ContentType);
+
+    contenido.Add(archivoContent, "archivo", archivo.Name);
+
+    var response = await _http.PostAsync("api/Instalaciones/subir-evidencia", contenido);
+
+    if (!response.IsSuccessStatusCode)
+    {
+        return null;
+    }
+
+    var resultado = await response.Content.ReadFromJsonAsync<SubirEvidenciaResponse>(
+        new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+    return resultado?.Ruta;
+}
+
+
+
 }

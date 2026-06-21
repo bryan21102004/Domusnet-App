@@ -92,6 +92,8 @@ public async Task<ResultadoOperacion?> ConvertirSolicitudEnClienteAsync(
         request
     );
 
+    var contenido = await response.Content.ReadAsStringAsync();
+
     if (response.IsSuccessStatusCode)
     {
         var resultadoApi = await response.Content.ReadFromJsonAsync<ConvertirClienteResponse>();
@@ -103,14 +105,10 @@ public async Task<ResultadoOperacion?> ConvertirSolicitudEnClienteAsync(
         };
     }
 
-    var errorTexto = await response.Content.ReadAsStringAsync();
-
     return new ResultadoOperacion
     {
         Resultado = -1,
-        Mensaje = string.IsNullOrWhiteSpace(errorTexto)
-            ? "No se pudo convertir la solicitud en cliente."
-            : errorTexto
+        Mensaje = contenido
     };
 }
 }

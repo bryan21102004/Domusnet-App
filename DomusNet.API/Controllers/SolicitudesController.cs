@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DomusNet.API.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Administrador,Vendedor")]
 [Route("api/[controller]")]
 public class SolicitudesController : ControllerBase
 {
@@ -20,6 +21,7 @@ public class SolicitudesController : ControllerBase
     }
 
     [HttpPost]
+
     [AllowAnonymous]
     public async Task<IActionResult> Crear([FromBody] SolicitudCreateDto dto)
     {
@@ -67,6 +69,7 @@ public class SolicitudesController : ControllerBase
   
 
 [HttpPost("{idSolicitud}/convertir-cliente")]
+[Authorize(Roles = "Administrador,Vendedor")]
 public async Task<IActionResult> ConvertirSolicitudEnCliente(
     int idSolicitud,
     [FromBody] ConvertirSolicitudClienteDto dto)

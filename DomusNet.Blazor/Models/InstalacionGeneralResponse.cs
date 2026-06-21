@@ -5,6 +5,8 @@ public class InstalacionGeneralResponse
     public int IdInstalacion { get; set; }
     public int IdSolicitud { get; set; }
 
+    public string? EstadoSolicitud { get; set; }
+
     public int IdTecnicoAsignado { get; set; }
     public string? NombreTecnico { get; set; }
 

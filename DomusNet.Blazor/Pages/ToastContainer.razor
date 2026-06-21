@@ -1,0 +1,128 @@
+@namespace DomusNet.Blazor.Components
+@using DomusNet.Blazor.Services
+@inject ToastService Toast
+@implements IDisposable
+
+<div style="position: fixed; top: 90px; right: 20px; z-index: 999999; width: 380px; max-width: 90vw;">
+
+    @foreach (var toast in Toast.Toasts)
+    {
+        <div @key="toast.Id"
+             style="@ObtenerEstiloToast(toast.Type)">
+
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <div style="@ObtenerEstiloIcono(toast.Type)">
+                    @ObtenerIcono(toast.Type)
+                </div>
+
+                <div style="flex: 1;">
+                    <strong style="display: block; color: white; margin-bottom: 4px;">
+                        @ObtenerTitulo(toast.Type)
+                    </strong>
+
+                    <span style="color: #cbd5e1; font-size: 14px;">
+                        @toast.Message
+                    </span>
+                </div>
+
+                <button type="button"
+                        style="background: transparent; border: none; color: white; font-size: 22px; cursor: pointer;"
+                        @onclick="() => Toast.Remove(toast.Id)">
+                    ×
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Toast.OnChange += Actualizar;
+    }
+
+    private void Actualizar()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ProbarToast()
+    {
+        Toast.Success("Toast funcionando correctamente.");
+    }
+
+    public void Dispose()
+    {
+        Toast.OnChange -= Actualizar;
+    }
+
+    private string ObtenerTitulo(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Success => "Operación realizada",
+            ToastType.Error => "Ocurrió un problema",
+            ToastType.Warning => "Atención",
+            ToastType.Info => "Información",
+            _ => "Mensaje"
+        };
+    }
+
+    private string ObtenerIcono(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Success => "✓",
+            ToastType.Error => "!",
+            ToastType.Warning => "⚠",
+            ToastType.Info => "i",
+            _ => "•"
+        };
+    }
+
+    private string ObtenerEstiloToast(ToastType type)
+    {
+        var color = type switch
+        {
+            ToastType.Success => "#10b981",
+            ToastType.Error => "#ef4444",
+            ToastType.Warning => "#f59e0b",
+            ToastType.Info => "#06b6d4",
+            _ => "#64748b"
+        };
+
+        return $@"
+            background: #020617;
+            border: 1px solid {color};
+            border-left: 6px solid {color};
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 20px 45px rgba(0,0,0,.45);
+        ";
+    }
+
+    private string ObtenerEstiloIcono(ToastType type)
+    {
+        var color = type switch
+        {
+            ToastType.Success => "#10b981",
+            ToastType.Error => "#ef4444",
+            ToastType.Warning => "#f59e0b",
+            ToastType.Info => "#06b6d4",
+            _ => "#64748b"
+        };
+
+        return $@"
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: {color}22;
+            color: {color};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        ";
+    }
+}

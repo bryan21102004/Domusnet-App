@@ -1,0 +1,411 @@
+
+@page "/vendedor/clientes"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@using Microsoft.JSInterop
+@inject ClientesVendedorService ClientesService
+@inject AuthFrontendService AuthService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Clientes — Vendedor</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Panel vendedor
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Clientes <span class="gradient-text">Activos</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Consulta los clientes registrados, su paquete contratado y su estado de pago.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="VolverPanel">
+                    Volver
+                </button>
+
+                <button class="btn-primary-domus px-5 py-3"
+                        @onclick="CargarClientes">
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Mensaje -->
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="@claseMensaje mb-6">
+                @mensaje
+            </div>
+        }
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+            <div class="domus-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-domus-text-secondary">Total clientes</p>
+                        <p class="text-3xl font-extrabold text-domus-text mt-2">
+                            @clientes.Count
+                        </p>
+                    </div>
+
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                        <span class="text-domus-cyan-light text-xl font-bold">C</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Pendientes</p>
+                <p class="text-3xl font-extrabold text-yellow-300 mt-2">
+                    @clientes.Count(c => c.EstadoPago?.Equals("Pendiente", StringComparison.OrdinalIgnoreCase) == true)
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Al día</p>
+                <p class="text-3xl font-extrabold text-emerald-300 mt-2">
+                    @clientes.Count(c => c.EstadoPago?.Equals("AlDia", StringComparison.OrdinalIgnoreCase) == true)
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Morosos</p>
+                <p class="text-3xl font-extrabold text-red-300 mt-2">
+                    @clientes.Count(c => c.EstadoPago?.Equals("Moroso", StringComparison.OrdinalIgnoreCase) == true)
+                </p>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="domus-card mb-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-domus-text">
+                        Listado de clientes
+                    </h2>
+
+                    <p class="text-sm text-domus-text-secondary mt-1">
+                        Mostrando: @clientesFiltrados.Count cliente(s)
+                    </p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                            @bind="estadoPagoFiltro">
+                        <option value="">Todos</option>
+                        <option value="Pendiente">Pendientes</option>
+                        <option value="AlDia">Al día</option>
+                        <option value="Moroso">Morosos</option>
+                    </select>
+
+                    <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan min-w-[260px]"
+                           placeholder="Buscar por nombre, teléfono o correo..."
+                           @bind="busqueda" />
+                </div>
+            </div>
+        </div>
+
+       <!-- Contenido -->
+@if (cargando)
+{
+    <div class="domus-card text-center py-12">
+        <p class="text-domus-text-secondary">
+            Cargando clientes...
+        </p>
+    </div>
+}
+else if (!clientesFiltrados.Any())
+{
+    <div class="domus-card text-center py-12">
+        <h3 class="text-xl font-bold text-domus-text mb-2">
+            No hay clientes para mostrar
+        </h3>
+
+        <p class="text-domus-text-secondary">
+            Probá actualizar o cambiar los filtros.
+        </p>
+    </div>
+}
+else
+{
+    <div class="domus-card overflow-hidden p-0">
+        <div class="px-6 py-5 border-b border-domus-border bg-domus-dark/40">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <h3 class="text-xl font-bold text-domus-text">
+                        Clientes registrados
+                    </h3>
+
+                    <p class="text-sm text-domus-text-secondary mt-1">
+                        Información general, paquete contratado y estado de pago.
+                    </p>
+                </div>
+
+                <span class="text-sm px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-domus-cyan-light">
+                    @clientesFiltrados.Count cliente(s)
+                </span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[1100px] text-sm">
+                <thead class="bg-domus-dark border-b border-domus-border">
+                    <tr class="text-left">
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Cliente
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Contacto
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Paquete
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Precio
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Estado
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Vendedor
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Registro
+                        </th>
+
+                        <th class="px-6 py-4 font-semibold text-domus-text-secondary">
+                            Dirección
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-domus-border">
+                    @foreach (var cliente in clientesFiltrados)
+                    {
+                        <tr class="hover:bg-white/[0.03] transition-colors">
+
+                            <!-- Cliente -->
+                            <td class="px-6 py-5 align-top">
+                                <div>
+                                    <p class="font-bold text-domus-text">
+                                        @cliente.NombreCompleto
+                                    </p>
+
+                                    <p class="text-xs text-domus-text-secondary mt-1">
+                                        Cliente #@cliente.IdCliente
+                                    </p>
+                                </div>
+                            </td>
+
+                            <!-- Contacto -->
+                            <td class="px-6 py-5 align-top">
+                                <div class="space-y-1">
+                                    <p class="text-domus-text font-semibold">
+                                        @cliente.Telefono
+                                    </p>
+
+                                    <p class="text-xs text-domus-text-secondary break-all">
+                                        @(!string.IsNullOrWhiteSpace(cliente.Correo)
+                                            ? cliente.Correo
+                                            : "Sin correo")
+                                    </p>
+                                </div>
+                            </td>
+
+                            <!-- Paquete -->
+                            <td class="px-6 py-5 align-top">
+                                <div>
+                                    <p class="font-semibold text-domus-text">
+                                        @(!string.IsNullOrWhiteSpace(cliente.NombrePaquete)
+                                            ? cliente.NombrePaquete
+                                            : "Sin paquete")
+                                    </p>
+
+                                    <p class="text-xs text-domus-cyan-light mt-1">
+                                        @(!string.IsNullOrWhiteSpace(cliente.Velocidad)
+                                            ? $"{cliente.Velocidad} Mbps"
+                                            : "Sin velocidad")
+                                    </p>
+                                </div>
+                            </td>
+
+                            <!-- Precio -->
+                            <td class="px-6 py-5 align-top">
+                                <p class="font-bold text-emerald-300">
+                                    @(cliente.Precio.HasValue
+                                        ? $"₡{cliente.Precio.Value:N0}"
+                                        : "Sin precio")
+                                </p>
+
+                                <p class="text-xs text-domus-text-secondary mt-1">
+                                    mensual
+                                </p>
+                            </td>
+
+                            <!-- Estado -->
+                            <td class="px-6 py-5 align-top">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border @ObtenerClaseEstadoPago(cliente.EstadoPago)">
+                                    @ObtenerTextoEstadoPago(cliente.EstadoPago)
+                                </span>
+                            </td>
+
+                            <!-- Vendedor -->
+                            <td class="px-6 py-5 align-top">
+                                <p class="text-domus-text font-semibold">
+                                    @(!string.IsNullOrWhiteSpace(cliente.NombreVendedor)
+                                        ? cliente.NombreVendedor
+                                        : "Sin asignar")
+                                </p>
+                            </td>
+
+                            <!-- Registro -->
+                            <td class="px-6 py-5 align-top">
+                                <p class="text-domus-text">
+                                    @(cliente.FechaRegistro > DateTime.MinValue
+                                        ? cliente.FechaRegistro.ToString("dd/MM/yyyy")
+                                        : "Sin fecha")
+                                </p>
+                            </td>
+
+                            <!-- Dirección -->
+                            <td class="px-6 py-5 align-top max-w-[280px]">
+                                <p class="text-domus-text-secondary leading-relaxed">
+                                    @cliente.Direccion
+                                </p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+       </div>    
+</section>
+
+@code {
+    private List<ClienteResponse> clientes = new();
+
+    private string busqueda = string.Empty;
+    private string estadoPagoFiltro = string.Empty;
+    private string mensaje = string.Empty;
+    private string claseMensaje = string.Empty;
+    private bool cargando = true;
+
+    private List<ClienteResponse> clientesFiltrados =>
+        clientes
+            .Where(c =>
+                string.IsNullOrWhiteSpace(estadoPagoFiltro) ||
+                string.Equals(c.EstadoPago, estadoPagoFiltro, StringComparison.OrdinalIgnoreCase))
+            .Where(c =>
+                string.IsNullOrWhiteSpace(busqueda) ||
+                (c.NombreCompleto?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (c.Telefono?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (c.Correo?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderByDescending(c => c.FechaRegistro)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "token");
+        var rol = await JS.InvokeAsync<string>("localStorage.getItem", "rol");
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            Navigation.NavigateTo("/acceso-interno", forceLoad: true);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor" && rol.Trim().ToLower() != "administrador")
+        {
+            Navigation.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        cargando = true;
+        mensaje = string.Empty;
+
+        try
+        {
+            clientes = await ClientesService.ListarClientesAsync();
+        }
+        catch
+        {
+            MostrarError("No se pudieron cargar los clientes.");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+private async Task VolverPanel()
+{
+    var rol = await AuthService.ObtenerRolAsync();
+    var rolNormalizado = rol?.Trim().ToLower();
+
+    if (rolNormalizado == "administrador")
+    {
+        Navigation.NavigateTo("/admin");
+    }
+    else if (rolNormalizado == "vendedor")
+    {
+        Navigation.NavigateTo("/vendedor");
+    }
+    else
+    {
+        Navigation.NavigateTo("/");
+    }
+}
+
+    private void MostrarError(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private string ObtenerClaseEstadoPago(string? estado)
+    {
+        return estado?.Trim().ToLower() switch
+        {
+            "aldia"  => "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+            "deudor" => "bg-red-500/10 text-red-300 border-red-500/30",
+            _ => "bg-white/5 text-domus-text-secondary border-domus-border"
+        };
+    }
+
+    private string ObtenerTextoEstadoPago(string? estado)
+    {
+        return estado?.Trim().ToLower() switch
+        {
+            "aldia"  => "Al día",
+            "deudor" => "Deudor",
+            _ => estado ?? "Desconocido"
+        };
+    }
+}
+
+

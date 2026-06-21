@@ -4,8 +4,8 @@
 @using Microsoft.JSInterop
 @inject InstalacionesVendedorService InstalacionesService
 @inject IJSRuntime JS
+@inject AuthFrontendService AuthService
 @inject NavigationManager Navigation
-
 <PageTitle>Instalaciones — Vendedor</PageTitle>
 
 <section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
@@ -27,10 +27,10 @@
             </div>
 
             <div class="flex gap-3">
-                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
-                        @onclick="VolverPanel">
-                    Volver
-                </button>
+               <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+        @onclick="VolverPanel">
+    Volver
+</button>
 
                 <button class="btn-primary-domus px-5 py-3"
                         @onclick="CargarInstalaciones">
@@ -68,12 +68,7 @@
                 </p>
             </div>
 
-            <div class="domus-card">
-                <p class="text-sm text-domus-text-secondary">Canceladas</p>
-                <p class="text-3xl font-extrabold text-red-300 mt-2">
-                    @ContarPorEstado("Cancelada")
-                </p>
-            </div>
+           
         </div>
 
         <div class="domus-card mb-6">
@@ -94,8 +89,7 @@
                         <option value="">Todas</option>
                         <option value="Programada">Programadas</option>
                         <option value="Realizada">Realizadas</option>
-                        <option value="Reprogramada">Reprogramadas</option>
-                        <option value="Cancelada">Canceladas</option>
+                      
                     </select>
 
                     <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan"
@@ -136,7 +130,11 @@
                             <div class="flex-1">
                                 <div class="flex flex-wrap items-center gap-3 mb-4">
                                     <span class="text-xs px-3 py-1 rounded-full border @ObtenerClaseEstado(instalacion.Estado)">
-                                        @ObtenerTexto(instalacion.Estado, "Sin estado")
+                                        Instalación: @ObtenerTexto(instalacion.Estado, "Sin estado")
+                                    </span>
+
+                                    <span class="text-xs px-3 py-1 rounded-full border border-domus-border text-domus-text-secondary">
+                                        Solicitud: @ObtenerTexto(instalacion.EstadoSolicitud, "Sin estado")
                                     </span>
 
                                     <span class="text-xs text-domus-text-secondary">
@@ -233,42 +231,63 @@
                                 @if (EsRealizada(instalacion))
                                 {
                                     <div class="mt-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                                        <p class="text-sm font-semibold text-emerald-300 mb-2">
+                                        <p class="text-sm font-semibold text-emerald-300 mb-4">
                                             Instalación realizada por el técnico
                                         </p>
 
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 text-sm">
                                             <div>
-                                                <p class="text-domus-text-secondary">Foto evidencia</p>
-                                                <p class="text-domus-text">
-                                                    @(string.IsNullOrWhiteSpace(instalacion.FotoEvidencia)
-                                                        ? "Sin evidencia registrada"
-                                                        : "Evidencia registrada")
+                                                <p class="text-domus-text-secondary mb-2">
+                                                    Foto evidencia
                                                 </p>
+
+                                                @if (string.IsNullOrWhiteSpace(instalacion.FotoEvidencia))
+                                                {
+                                                    <div class="p-4 rounded-lg bg-domus-dark border border-domus-border">
+                                                        <p class="text-domus-text">
+                                                            Sin evidencia registrada
+                                                        </p>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="rounded-xl border border-domus-border bg-domus-dark overflow-hidden">
+                                                        <img src="@ObtenerUrlEvidencia(instalacion.FotoEvidencia)"
+                                                             alt="Evidencia de instalación"
+                                                             class="block w-full max-h-[420px] object-contain bg-black/20" />
+                                                    </div>
+
+                                                    <p class="text-xs text-domus-text-secondary mt-2 break-all">
+                                                        Archivo: @instalacion.FotoEvidencia
+                                                    </p>
+                                                }
                                             </div>
 
                                             <div>
-                                                <p class="text-domus-text-secondary">Prueba velocidad</p>
-                                                <p class="text-domus-text">
+                                                <p class="text-domus-text-secondary mb-1">
+                                                    Prueba velocidad
+                                                </p>
+
+                                                <p class="text-domus-text font-semibold">
                                                     @(string.IsNullOrWhiteSpace(instalacion.PruebaVelocidad)
                                                         ? "Sin prueba registrada"
                                                         : instalacion.PruebaVelocidad)
                                                 </p>
+
+                                                @if (!string.IsNullOrWhiteSpace(instalacion.ComentarioTecnico))
+                                                {
+                                                    <div class="mt-5">
+                                                        <p class="text-domus-text-secondary text-sm mb-1">
+                                                            Comentario técnico
+                                                        </p>
+
+                                                        <p class="text-domus-text text-sm font-semibold">
+                                                            @instalacion.ComentarioTecnico
+                                                        </p>
+                                                    </div>
+                                                }
                                             </div>
                                         </div>
-
-                                        @if (!string.IsNullOrWhiteSpace(instalacion.ComentarioTecnico))
-                                        {
-                                            <div class="mt-3">
-                                                <p class="text-domus-text-secondary text-sm">
-                                                    Comentario técnico
-                                                </p>
-
-                                                <p class="text-domus-text text-sm">
-                                                    @instalacion.ComentarioTecnico
-                                                </p>
-                                            </div>
-                                        }
                                     </div>
                                 }
                             </div>
@@ -287,24 +306,48 @@
                                     </div>
                                 }
 
-                              @if (EsRealizada(instalacion))
-    {
-        <div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-            <p class="text-emerald-300 font-semibold">
-                Lista para conversión
-            </p>
+                                @if (EsRealizada(instalacion) && instalacion.EstadoSolicitud?.Equals("Realizada", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                                        <p class="text-emerald-300 font-semibold">
+                                            Lista para conversión
+                                        </p>
 
-            <p class="text-sm text-domus-text-secondary mt-1">
-                La instalación ya fue realizada. Podés convertir esta solicitud en cliente activo.
-            </p>
-        </div>
+                                        <p class="text-sm text-domus-text-secondary mt-1">
+                                            La instalación ya fue realizada. Podés convertir esta solicitud en cliente activo.
+                                        </p>
+                                    </div>
 
-        <button class="btn-primary-domus w-full justify-center"
-                disabled="@guardandoConversion"
-                @onclick="() => ConvertirCliente(instalacion.IdSolicitud)">
-            @(guardandoConversion ? "Convirtiendo..." : "Convertir a cliente")
-        </button>
-    }
+                                    <button class="btn-primary-domus w-full justify-center"
+                                            disabled="@guardandoConversion"
+                                            @onclick="() => ConvertirCliente(instalacion.IdSolicitud)">
+                                        @(guardandoConversion ? "Convirtiendo..." : "Convertir a cliente")
+                                    </button>
+                                }
+                                else if (instalacion.EstadoSolicitud?.Equals("Convertida", StringComparison.OrdinalIgnoreCase) == true)
+                                {
+                                    <div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                                        <p class="text-emerald-300 font-semibold">
+                                            Cliente convertido
+                                        </p>
+
+                                        <p class="text-sm text-domus-text-secondary mt-1">
+                                            Esta solicitud ya fue convertida en cliente activo.
+                                        </p>
+                                    </div>
+                                }
+                                else if (EsRealizada(instalacion))
+                                {
+                                    <div class="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                        <p class="text-yellow-300 font-semibold">
+                                            Instalación realizada
+                                        </p>
+
+                                        <p class="text-sm text-domus-text-secondary mt-1">
+                                            La instalación está realizada, pero la solicitud aún no está lista para conversión.
+                                        </p>
+                                    </div>
+                                }
 
                                 @if (instalacion.Estado?.Equals("Cancelada", StringComparison.OrdinalIgnoreCase) == true)
                                 {
@@ -338,7 +381,6 @@
 
     </div>
 </section>
-
 @code {
     private List<InstalacionGeneralResponse> instalaciones = new();
 
@@ -385,7 +427,7 @@
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor")
+        if (string.IsNullOrWhiteSpace(rol) || rol.Trim().ToLower() != "vendedor" && rol.Trim().ToLower() != "administrador")
         {
             Navigation.NavigateTo("/", forceLoad: true);
             return false;
@@ -394,6 +436,23 @@
         return true;
     }
 
+
+
+
+private string ObtenerUrlEvidencia(string? ruta)
+{
+    if (string.IsNullOrWhiteSpace(ruta))
+    {
+        return string.Empty;
+    }
+
+    if (ruta.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+    {
+        return ruta;
+    }
+
+    return $"http://localhost:5242/{ruta.TrimStart('/')}";
+}
     private async Task CargarInstalaciones()
     {
         cargando = true;
@@ -439,10 +498,23 @@
         Navigation.NavigateTo("/vendedor/solicitudes");
     }
 
-    private void VolverPanel()
+ private async Task VolverPanel()
+{
+    var rol = await AuthService.ObtenerRolAsync();
+
+    if (rol == "Administrador")
+    {
+        Navigation.NavigateTo("/admin");
+    }
+    else if (rol == "Vendedor")
     {
         Navigation.NavigateTo("/vendedor");
     }
+    else
+    {
+        Navigation.NavigateTo("/");
+    }
+}
 
     private void MostrarError(string texto)
     {
@@ -479,7 +551,7 @@
             _ => "bg-white/5 text-domus-text-secondary border-domus-border"
         };
     }
-   private async Task ConvertirCliente(int idSolicitud)
+  private async Task ConvertirCliente(int idSolicitud)
 {
     guardandoConversion = true;
     mensaje = string.Empty;
@@ -514,7 +586,7 @@
 
             if (instalacion != null)
             {
-                instalacion.Estado = "Convertida";
+                instalacion.EstadoSolicitud = "Convertida";
             }
 
             await CargarInstalaciones();
@@ -533,4 +605,8 @@
         guardandoConversion = false;
     }
 }
+
+
+
+
 }

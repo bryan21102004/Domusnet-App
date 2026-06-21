@@ -1,12 +1,8 @@
-
 CREATE DATABASE DomusNet;
 GO
 USE DomusNet;
 GO
 
--- ────────────────────────────────────────────────────
---  ROLES
--- ────────────────────────────────────────────────────
 CREATE TABLE Roles (
     IdRol           INT           NOT NULL IDENTITY(1,1),
     NombreRol       NVARCHAR(50)  NOT NULL,
@@ -20,14 +16,12 @@ INSERT INTO Roles (NombreRol, Descripcion) VALUES
   ('Vendedor',      'Gestión de clientes y paquetes'),
   ('Tecnico',       'Atención de tickets e incidencias');
 
--- ────────────────────────────────────────────────────
---  USUARIOS  (Administrador / Vendedor / Tecnico)
--- ────────────────────────────────────────────────────
+
 CREATE TABLE Usuarios (
     IdUsuario       INT            NOT NULL IDENTITY(1,1),
     Nombre          NVARCHAR(100)  NOT NULL,
     Correo          NVARCHAR(150)  NOT NULL,
-    Contrasena      NVARCHAR(255)  NOT NULL,  -- bcrypt hash
+    Contrasena      NVARCHAR(255)  NOT NULL,  
     Telefono        NVARCHAR(20)   NULL,
     IdRol           INT            NOT NULL,
     Activo          BIT            NOT NULL DEFAULT 1,
@@ -40,25 +34,23 @@ CREATE TABLE Usuarios (
         REFERENCES Roles (IdRol)
 );
 
--- ────────────────────────────────────────────────────
---  PAQUETES DE SERVICIO
--- ────────────────────────────────────────────────────
+
+
 CREATE TABLE PaquetesServicio (
     IdPaquete       INT            NOT NULL IDENTITY(1,1),
     Nombre          NVARCHAR(100)  NOT NULL,
     Descripcion     NVARCHAR(500)  NULL,
-    Velocidad       NVARCHAR(50)   NULL,       -- ej. "50 Mbps"
+    Velocidad       NVARCHAR(50)   NULL,      
     Precio          DECIMAL(10,2)  NOT NULL,
-    PorcentajeDistribucion DECIMAL(5,2) NULL,  -- para reparto de ingresos
+    PorcentajeDistribucion DECIMAL(5,2) NULL, 
     Estado          NVARCHAR(20)   NOT NULL DEFAULT 'Activo'
         CONSTRAINT CK_Paquetes_Estado CHECK (Estado IN ('Activo','Inactivo')),
     FechaCreacion   DATETIME2      NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_PaquetesServicio PRIMARY KEY (IdPaquete)
 );
 
--- ────────────────────────────────────────────────────
---  CLIENTES EXTERNOS (área pública, sin auth)
--- ────────────────────────────────────────────────────
+
+
 CREATE TABLE ClientesExternos (
     IdClienteExterno INT           NOT NULL IDENTITY(1,1),
     NombreCompleto   NVARCHAR(150) NOT NULL,
@@ -68,16 +60,20 @@ CREATE TABLE ClientesExternos (
     CONSTRAINT PK_ClientesExternos PRIMARY KEY (IdClienteExterno)
 );
 
--- ────────────────────────────────────────────────────
---  SOLICITUDES DE SERVICIO (formulario público → WhatsApp)
--- ────────────────────────────────────────────────────
+
+
 CREATE TABLE SolicitudesServicio (
     IdSolicitud      INT           NOT NULL IDENTITY(1,1),
     IdClienteExterno INT           NOT NULL,
     IdPaquete        INT           NULL,       -- paquete de interés
     FechaSolicitud   DATETIME2     NOT NULL DEFAULT GETDATE(),
     Estado           NVARCHAR(30)  NOT NULL DEFAULT 'Pendiente'
-        CONSTRAINT CK_Solicitudes_Estado CHECK (Estado IN ('Pendiente','Atendida','Cancelada')),
+        CONSTRAINT CK_Solicitudes_Estado CHECK (Estado IN (
+    'Pendiente',
+    'Programada',
+    'PendienteActivacion',
+    'Atendida',
+    'Cancelada')),
     IdVendedorAsignado INT         NULL,       -- se asigna tras contacto
     Notas            NVARCHAR(500) NULL,
     CONSTRAINT PK_SolicitudesServicio   PRIMARY KEY (IdSolicitud),
@@ -89,20 +85,21 @@ CREATE TABLE SolicitudesServicio (
         REFERENCES Usuarios (IdUsuario)
 );
 
--- ────────────────────────────────────────────────────
---  CLIENTES ACTIVOS (registrados por vendedor tras instalación)
--- ────────────────────────────────────────────────────
+
+
+
+
 CREATE TABLE Clientes (
     IdCliente        INT           NOT NULL IDENTITY(1,1),
     NombreCompleto   NVARCHAR(150) NOT NULL,
     Telefono         NVARCHAR(20)  NOT NULL,
     Correo           NVARCHAR(150) NULL,
     Direccion        NVARCHAR(300) NOT NULL,
-    EstadoPago       NVARCHAR(20)  NOT NULL DEFAULT 'AlDia'
+    EstadoPago       NVARCHAR(20)  NOT NULL DEFAULT 'Pendiente'
         CONSTRAINT CK_Clientes_EstadoPago CHECK (EstadoPago IN ('AlDia','Moroso','Pendiente')),
     FechaRegistro    DATETIME2     NOT NULL DEFAULT GETDATE(),
-    IdVendedor       INT           NOT NULL,   -- vendedor que registró
-    IdSolicitudOrigen INT          NULL,       -- trazabilidad desde solicitud
+    IdVendedor       INT           NOT NULL,   
+    IdSolicitudOrigen INT          NULL,       
     Activo           BIT           NOT NULL DEFAULT 1,
     CONSTRAINT PK_Clientes              PRIMARY KEY (IdCliente),
     CONSTRAINT FK_Clientes_Vendedor     FOREIGN KEY (IdVendedor)
@@ -111,9 +108,8 @@ CREATE TABLE Clientes (
         REFERENCES SolicitudesServicio (IdSolicitud)
 );
 
--- ────────────────────────────────────────────────────
---  ASIGNACIONES DE PAQUETE  (cliente ↔ paquete)
--- ────────────────────────────────────────────────────
+
+  
 CREATE TABLE AsignacionesPaquete (
     IdAsignacion     INT           NOT NULL IDENTITY(1,1),
     IdCliente        INT           NOT NULL,
@@ -132,9 +128,8 @@ CREATE TABLE AsignacionesPaquete (
         REFERENCES Usuarios (IdUsuario)
 );
 
--- ────────────────────────────────────────────────────
---  TICKETS  (averías, avisos, recordatorios)
--- ────────────────────────────────────────────────────
+
+
 CREATE TABLE Tickets (
     IdTicket         INT           NOT NULL IDENTITY(1,1),
     Titulo           NVARCHAR(200) NOT NULL,
@@ -161,16 +156,15 @@ CREATE TABLE Tickets (
         REFERENCES Usuarios (IdUsuario)
 );
 
--- ────────────────────────────────────────────────────
---  HISTORIAL DE ESTADOS DE TICKET  (trazabilidad)
--- ────────────────────────────────────────────────────
+
+
 CREATE TABLE HistorialTickets (
     IdHistorial      INT           NOT NULL IDENTITY(1,1),
     IdTicket         INT           NOT NULL,
     EstadoAnterior   NVARCHAR(20)  NULL,
     EstadoNuevo      NVARCHAR(20)  NOT NULL,
     Comentario       NVARCHAR(500) NULL,
-    IdUsuario        INT           NOT NULL,   -- quién hizo el cambio
+    IdUsuario        INT           NOT NULL,  
     Fecha            DATETIME2     NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_HistorialTickets   PRIMARY KEY (IdHistorial),
     CONSTRAINT FK_Historial_Ticket   FOREIGN KEY (IdTicket)
@@ -179,9 +173,7 @@ CREATE TABLE HistorialTickets (
         REFERENCES Usuarios (IdUsuario)
 );
 
--- ────────────────────────────────────────────────────
---  NOTIFICACIONES
--- ────────────────────────────────────────────────────
+
 CREATE TABLE Notificaciones (
     IdNotificacion   INT           NOT NULL IDENTITY(1,1),
     IdUsuarioDestino INT           NOT NULL,
@@ -196,9 +188,7 @@ CREATE TABLE Notificaciones (
         REFERENCES Tickets (IdTicket)
 );
 
--- ────────────────────────────────────────────────────
---  INGRESOS  (registrados por Administrador)
--- ────────────────────────────────────────────────────
+
 CREATE TABLE Ingresos (
     IdIngreso        INT           NOT NULL IDENTITY(1,1),
     IdCliente        INT           NULL,
@@ -216,9 +206,9 @@ CREATE TABLE Ingresos (
         REFERENCES Usuarios (IdUsuario)
 );
 
--- ────────────────────────────────────────────────────
---  VENTAS  (generadas al asignar un paquete)
--- ────────────────────────────────────────────────────
+
+
+
 CREATE TABLE Ventas (
     IdVenta          INT           NOT NULL IDENTITY(1,1),
     IdAsignacion     INT           NOT NULL,
@@ -231,20 +221,20 @@ CREATE TABLE Ventas (
         REFERENCES AsignacionesPaquete (IdAsignacion)
 );
 
--- ────────────────────────────────────────────────────
---  REPORTES
--- ────────────────────────────────────────────────────
+
 CREATE TABLE Reportes (
     IdReporte        INT           NOT NULL IDENTITY(1,1),
     Tipo             NVARCHAR(30)  NOT NULL
         CONSTRAINT CK_Reportes_Tipo CHECK (Tipo IN ('Ingresos','Clientes','Tickets','Operativo')),
-    Parametros       NVARCHAR(1000) NULL,      -- JSON con filtros aplicados
+    Parametros       NVARCHAR(1000) NULL,   
     FechaGeneracion  DATETIME2     NOT NULL DEFAULT GETDATE(),
     IdGeneradoPor    INT           NOT NULL,
     CONSTRAINT PK_Reportes           PRIMARY KEY (IdReporte),
     CONSTRAINT FK_Reportes_Usuario   FOREIGN KEY (IdGeneradoPor)
         REFERENCES Usuarios (IdUsuario)
 );
+
+
 CREATE TABLE AuditoriaAcciones (
     IdAuditoriaAccion INT            NOT NULL IDENTITY(1,1),
     Tabla             NVARCHAR(100)  NOT NULL,
@@ -258,3 +248,56 @@ CREATE TABLE AuditoriaAcciones (
         REFERENCES Usuarios (IdUsuario)
 );
 
+CREATE TABLE InstalacionesProgramadas (
+    IdInstalacion        INT IDENTITY(1,1) NOT NULL,
+    IdSolicitud          INT NOT NULL,
+    IdTecnicoAsignado    INT NOT NULL,
+    IdVendedorPrograma   INT NOT NULL,
+
+    FechaProgramada      DATETIME2 NOT NULL,
+    FechaRealizacion     DATETIME2 NULL,
+
+    UbicacionInstalacion NVARCHAR(500) NULL,
+    FotoEvidencia        NVARCHAR(500) NULL,
+    PruebaVelocidad      NVARCHAR(500) NULL,
+
+    Estado               NVARCHAR(30) NOT NULL DEFAULT 'Programada',
+    NotasVendedor        NVARCHAR(500) NULL,
+    ComentarioTecnico    NVARCHAR(500) NULL,
+
+    FechaCreacion        DATETIME2 NOT NULL DEFAULT GETDATE(),
+    FechaActualizacion   DATETIME2 NULL,
+
+    CONSTRAINT PK_InstalacionesProgramadas
+        PRIMARY KEY (IdInstalacion),
+
+    CONSTRAINT FK_Instalaciones_Solicitud
+        FOREIGN KEY (IdSolicitud)
+        REFERENCES SolicitudesServicio(IdSolicitud),
+
+    CONSTRAINT FK_Instalaciones_Tecnico
+        FOREIGN KEY (IdTecnicoAsignado)
+        REFERENCES Usuarios(IdUsuario),
+
+    CONSTRAINT FK_Instalaciones_Vendedor
+        FOREIGN KEY (IdVendedorPrograma)
+        REFERENCES Usuarios(IdUsuario),
+
+    CONSTRAINT CK_Instalaciones_Estado
+        CHECK (Estado IN (
+            'Programada',
+            'Realizada',
+            'Cancelada',
+            'Reprogramada'
+        ))
+);
+GO
+
+
+SELECT * FROM PaquetesServicio
+SELECT * FROM SolicitudesServicio
+SELECT * FROM InstalacionesProgramadas
+SELECT * FROM Clientes
+SELECT * FROM Tickets
+SELECT * FROM Ingresos
+SELECT * FROM Usuarios

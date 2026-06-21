@@ -1,13 +1,273 @@
-@page "/administrador"
+@page "/admin"
+
 
 <PageTitle>Panel Administrador — DomusNet</PageTitle>
 
-<section class="p-6">
-    <h1 class="text-3xl font-bold text-domus-text">
-        Panel de Administrador
-    </h1>
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+<!-- Header principal -->
+<div class="mb-8">
+    <div class="rounded-2xl border border-domus-border bg-domus-card p-6 sm:p-8">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
 
-    <p class="text-domus-text-secondary mt-2">
-        Bienvenido al panel de gestión de todo DomusNet.
-    </p>
+            <div>
+              
+
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-domus-text leading-tight">
+                    Centro de Control <span class="gradient-text">Administrativo</span>
+                </h1>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Accesos financieros -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-10">
+
+    <!-- Registrar ingresos -->
+    <a href="/admin/ingresos"
+       class="group domus-card no-underline hover:border-emerald-500/40 transition-all duration-300">
+
+        <div class="flex items-start justify-between gap-5">
+            <div>
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-xs font-semibold mb-4">
+                    Módulo principal
+                </span>
+
+                <h2 class="text-2xl font-extrabold text-domus-text group-hover:text-emerald-300 transition-colors">
+                    Registrar ingresos
+                </h2>
+
+                <p class="text-sm text-domus-text-secondary mt-3 leading-relaxed max-w-xl">
+                    Registrá pagos de clientes, método de pago, referencia y próxima fecha de vencimiento.
+                </p>
+            </div>
+
+            <div class="hidden sm:flex w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+            <span class="text-sm font-semibold text-emerald-300">
+                Ir a ingresos
+            </span>
+
+            <span class="text-emerald-300 group-hover:translate-x-1 transition-transform">
+                →
+            </span>
+        </div>
+    </a>
+
+    <!-- Reportes financieros -->
+    <a href="/admin/reportes"
+       class="group domus-card no-underline hover:border-cyan-500/40 transition-all duration-300">
+
+        <div class="flex items-start justify-between gap-5">
+            <div>
+                <span class="inline-flex items-center px-3 py-1 rounded-full bg-cyan-500/10 text-domus-cyan-light border border-cyan-500/20 text-xs font-semibold mb-4">
+                    Análisis financiero
+                </span>
+
+                <h2 class="text-2xl font-extrabold text-domus-text group-hover:text-domus-cyan-light transition-colors">
+                    Reportes financieros
+                </h2>
+
+                <p class="text-sm text-domus-text-secondary mt-3 leading-relaxed max-w-xl">
+                    Consultá ingresos por fechas, paquetes, clientes y otros filtros administrativos.
+                </p>
+            </div>
+
+            <div class="hidden sm:flex w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 15l3-3 3 2 5-6" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-between">
+            <span class="text-sm font-semibold text-domus-cyan-light">
+                Ver reportes
+            </span>
+
+            <span class="text-domus-cyan-light group-hover:translate-x-1 transition-transform">
+                →
+            </span>
+        </div>
+    </a>
+
+</div>
+
+        <!-- Gestión comercial -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-domus-text">
+                        Gestión comercial
+                    </h2>
+
+                    <p class="text-sm text-domus-text-secondary mt-1">
+                        Control de solicitudes, clientes e instalaciones.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <a href="/vendedor/solicitudes"
+                   class="domus-card group hover:border-cyan-500/40 transition-all duration-300 no-underline">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-5">
+                        <svg class="w-7 h-7 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2.25 4.5H6.75A2.25 2.25 0 014.5 18.25V5.75A2.25 2.25 0 016.75 3.5h7.5L19.5 8.75v9.5a2.25 2.25 0 01-2.25 2.25z" />
+                        </svg>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-domus-text" href="/vendedor/solicitudes">
+                        Solicitudes
+                    </h3>
+
+                    <p class="text-sm text-domus-text-secondary mt-2">
+                        Revisar, atender y dar seguimiento a solicitudes de servicio.
+                    </p>
+                </a>
+
+                <a href="/vendedor/instalaciones"
+                   class="domus-card group hover:border-emerald-500/40 transition-all duration-300 no-underline">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
+                        <svg class="w-7 h-7 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.008v.008H3.75V6.75zm0 5.25h.008v.008H3.75V12zm0 5.25h.008v.008H3.75v-.008z" />
+                        </svg>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-domus-text" href="/vendedor/instalaciones">
+                        Instalaciones
+                    </h3>
+
+                    <p class="text-sm text-domus-text-secondary mt-2">
+                        Supervisar instalaciones programadas, realizadas y evidencias.
+                    </p>
+                </a>
+
+                <a href="/vendedor/clientes"
+                   class="domus-card group hover:border-blue-500/40 transition-all duration-300 no-underline">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-5">
+                        <svg class="w-7 h-7 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128A9.37 9.37 0 0112 19.5c-2.291 0-4.39-.827-6.011-2.199A4.125 4.125 0 0112 15.375M12 12a3.375 3.375 0 100-6.75A3.375 3.375 0 0012 12z" />
+                        </svg>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-domus-text" href="/vendedor/clientes">
+                        Clientes
+                    </h3>
+
+                    <p class="text-sm text-domus-text-secondary mt-2">
+                        Consultar clientes activos, paquetes contratados y estado de pago.
+                    </p>
+                </a>
+
+            </div>
+        </div>
+
+        <!-- Operaciones y administración -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+
+            <div>
+                <h2 class="text-2xl font-bold text-domus-text mb-4">
+                    Operaciones
+                </h2>
+
+                <div class="grid grid-cols-1 gap-5">
+                    <a href="/tecnico/instalaciones"
+                       class="domus-card flex items-center gap-4 hover:border-yellow-500/40 transition-all duration-300 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l5.653-4.655" />
+                            </svg>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-domus-text">
+                                Vista técnica
+                            </h3>
+
+                            <p class="text-sm text-domus-text-secondary">
+                                Acceso a funciones operativas del técnico.
+                            </p>
+                        </div>
+                    </a>
+
+                    <a href="/admin/tickets"
+                       class="domus-card flex items-center gap-4 hover:border-red-500/40 transition-all duration-300 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78A1.5 1.5 0 0022.18 18L13.71 3.86a1.5 1.5 0 00-2.42 0z" />
+                            </svg>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-domus-text">
+                                Tickets y averías
+                            </h3>
+
+                            <p class="text-sm text-domus-text-secondary">
+                                Supervisar soporte, incidencias y tickets globales.
+                            </p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-2xl font-bold text-domus-text mb-4">
+                    Administración
+                </h2>
+
+                <div class="grid grid-cols-1 gap-5">
+                    <a href="/admin/usuarios"
+                       class="domus-card flex items-center gap-4 hover:border-cyan-500/40 transition-all duration-300 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3.75 3.75 0 00-7.5 0M15 11.25a3 3 0 11-6 0 3 3 0 016 0zM4.5 19.5a6.75 6.75 0 0113.5 0" />
+                            </svg>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-domus-text">
+                                Usuarios
+                            </h3>
+
+                            <p class="text-sm text-domus-text-secondary">
+                                Administrar vendedores, técnicos y accesos.
+                            </p>
+                        </div>
+                    </a>
+
+                    <a href="/admin/paquetes"
+                       class="domus-card flex items-center gap-4 hover:border-emerald-500/40 transition-all duration-300 no-underline">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21" />
+                            </svg>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-bold text-domus-text">
+                                Paquetes
+                            </h3>
+
+                            <p class="text-sm text-domus-text-secondary">
+                                Gestionar planes de internet y precios.
+                            </p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
 </section>

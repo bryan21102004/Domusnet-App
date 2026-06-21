@@ -11,13 +11,17 @@
 
         <!-- Header -->
         <div class="text-center mb-16">
+            <p class="text-sm text-domus-cyan-light font-semibold mb-3">
+                Planes residenciales
+            </p>
+
             <h1 class="text-4xl sm:text-5xl font-extrabold text-domus-text">
                 Nuestros <span class="gradient-text">Paquetes</span>
             </h1>
 
             <p class="text-domus-text-secondary text-lg mt-6 max-w-2xl mx-auto">
                 Elegí el plan que mejor se adapte a las necesidades de tu hogar.
-                Todos incluyen instalación y soporte técnico.
+                Todos incluyen instalación residencial y soporte técnico.
             </p>
         </div>
 
@@ -41,6 +45,7 @@
                 <h2 class="text-2xl font-bold text-domus-text mb-2">
                     No hay paquetes disponibles
                 </h2>
+
                 <p class="text-domus-text-secondary">
                     Actualmente no hay paquetes activos para mostrar.
                 </p>
@@ -54,17 +59,32 @@
                     <div class="domus-card flex flex-col justify-between hover:border-cyan-500/40 transition-all duration-300">
 
                         <div>
-                            <div class="mb-8">
-                                <span class="inline-flex text-xs px-3 py-1 rounded-full bg-cyan-500/10 text-domus-cyan-light font-bold tracking-wide">
+                            <div class="mb-6 flex items-center justify-between gap-3">
+                                <span class="inline-flex text-xs px-3 py-1 rounded-full bg-cyan-500/10 text-domus-cyan-light font-bold tracking-wide border border-cyan-500/20">
                                     @ObtenerEtiqueta(paquete)
+                                </span>
+
+                                <span class="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                                    Disponible
                                 </span>
                             </div>
 
-                            <h2 class="text-2xl font-bold text-domus-text mb-6">
+                            <h2 class="text-2xl font-bold text-domus-text mb-3">
                                 @paquete.Nombre
                             </h2>
 
-                            <div class="mb-8">
+                            @if (!string.IsNullOrWhiteSpace(paquete.Descripcion))
+                            {
+                                <p class="text-sm text-domus-text-secondary mb-6">
+                                    @paquete.Descripcion
+                                </p>
+                            }
+
+                            <div class="mb-8 p-5 rounded-xl bg-domus-dark border border-domus-border">
+                                <p class="text-sm text-domus-text-secondary mb-2">
+                                    Velocidad del plan
+                                </p>
+
                                 <p class="text-5xl font-extrabold gradient-text">
                                     @paquete.Velocidad
                                     <span class="text-base font-medium text-domus-text-secondary">
@@ -74,6 +94,10 @@
                             </div>
 
                             <div class="mb-8">
+                                <p class="text-sm text-domus-text-secondary mb-2">
+                                    Precio mensual
+                                </p>
+
                                 <p class="text-4xl font-extrabold text-domus-cyan-light">
                                     ₡@paquete.Precio.ToString("N0")
                                     <span class="text-base font-medium text-domus-text-secondary">
@@ -82,27 +106,33 @@
                                 </p>
                             </div>
 
-                            <div class="space-y-3 mb-10">
+                            <div class="space-y-3 mb-8">
                                 <div class="flex items-center gap-3 text-domus-text-secondary">
-                                    <span class="text-domus-cyan-light text-xl">✓</span>
-                                    <span>IVA 13% 1% cruz roja</span>
-                                </div>
-
-                                <div class="flex items-center gap-3 text-domus-text-secondary">
-                                    <span class="text-domus-cyan-light text-xl">✓</span>
+                                    <span class="w-6 h-6 rounded-full bg-cyan-500/10 text-domus-cyan-light flex items-center justify-center text-sm">
+                                        ✓
+                                    </span>
                                     <span>Soporte técnico incluido</span>
                                 </div>
 
                                 <div class="flex items-center gap-3 text-domus-text-secondary">
-                                    <span class="text-domus-cyan-light text-xl">✓</span>
+                                    <span class="w-6 h-6 rounded-full bg-cyan-500/10 text-domus-cyan-light flex items-center justify-center text-sm">
+                                        ✓
+                                    </span>
                                     <span>Instalación residencial</span>
+                                </div>
+
+                                <div class="flex items-center gap-3 text-domus-text-secondary">
+                                    <span class="w-6 h-6 rounded-full bg-cyan-500/10 text-domus-cyan-light flex items-center justify-center text-sm">
+                                        ✓
+                                    </span>
+                                    <span>Plan ideal para el hogar</span>
                                 </div>
                             </div>
                         </div>
 
                         <button class="w-full px-5 py-3 rounded-lg border border-domus-cyan text-domus-cyan-light font-semibold hover:bg-domus-cyan hover:text-domus-dark transition-colors"
                                 @onclick="() => SolicitarPaquete(paquete.IdPaquete)">
-                            Solicitar
+                            Solicitar paquete
                         </button>
                     </div>
                 }

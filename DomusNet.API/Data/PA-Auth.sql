@@ -1,7 +1,8 @@
+
 USE DomusNet;
 GO
 
--- Agregar columna RefreshToken si no existe (ejecutar una sola vez)
+
 IF NOT EXISTS (
     SELECT 1 FROM sys.columns
     WHERE object_id = OBJECT_ID('Usuarios') AND name = 'RefreshToken'
@@ -11,7 +12,7 @@ BEGIN
 END
 GO
 
--- ── AUTH / TOKENS ────────────────────────────────────────
+
 
 CREATE OR ALTER PROCEDURE modificarToken
     @IdUsuario      INT,

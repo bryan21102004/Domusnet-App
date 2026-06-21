@@ -16,5 +16,7 @@ builder.Services.AddScoped<PaquetesFrontendService>();
 builder.Services.AddScoped<SolicitudesPublicasService>();
 builder.Services.AddScoped<InstalacionesVendedorService>();
 builder.Services.AddScoped<TecnicoInstalacionesService>();
-
+builder.Services.AddScoped<ClientesVendedorService>();
+builder.Services.AddScoped<AdminIngresosService>();
+builder.Services.AddScoped<ToastService>();
 await builder.Build().RunAsync();

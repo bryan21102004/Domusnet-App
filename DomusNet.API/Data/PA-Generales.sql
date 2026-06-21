@@ -1,353 +1,51 @@
--- =============================================
--- FILE: bd.sql
--- =============================================
 
-
-CREATE DATABASE DomusNet;
-GO
-USE DomusNet;
+USE DomusNet
 GO
 
--- ────────────────────────────────────────────────────
---  ROLES
--- ────────────────────────────────────────────────────
-CREATE TABLE Roles (
-    IdRol           INT           NOT NULL IDENTITY(1,1),
-    NombreRol       NVARCHAR(50)  NOT NULL,
-    Descripcion     NVARCHAR(200) NULL,
-    CONSTRAINT PK_Roles PRIMARY KEY (IdRol),
-    CONSTRAINT UQ_Roles_Nombre UNIQUE (NombreRol)
-);
-
-INSERT INTO Roles (NombreRol, Descripcion) VALUES
-  ('Administrador', 'Control total del sistema'),
-  ('Vendedor',      'Gestión de clientes y paquetes'),
-  ('Tecnico',       'Atención de tickets e incidencias');
-
--- ────────────────────────────────────────────────────
---  USUARIOS  (Administrador / Vendedor / Tecnico)
--- ────────────────────────────────────────────────────
-CREATE TABLE Usuarios (
-    IdUsuario       INT            NOT NULL IDENTITY(1,1),
-    Nombre          NVARCHAR(100)  NOT NULL,
-    Correo          NVARCHAR(150)  NOT NULL,
-    Contrasena      NVARCHAR(255)  NOT NULL,  -- bcrypt hash
-    Telefono        NVARCHAR(20)   NULL,
-    IdRol           INT            NOT NULL,
-    Activo          BIT            NOT NULL DEFAULT 1,
-    FechaCreacion   DATETIME2      NOT NULL DEFAULT GETDATE(),
-    FechaModificacion DATETIME2    NULL,
-    RefreshToken      NVARCHAR(255) NULL,
-    CONSTRAINT PK_Usuarios  PRIMARY KEY (IdUsuario),
-    CONSTRAINT UQ_Usuarios_Correo UNIQUE (Correo),
-    CONSTRAINT FK_Usuarios_Roles  FOREIGN KEY (IdRol)
-        REFERENCES Roles (IdRol)
-);
-
--- ────────────────────────────────────────────────────
---  PAQUETES DE SERVICIO
--- ────────────────────────────────────────────────────
-CREATE TABLE PaquetesServicio (
-    IdPaquete       INT            NOT NULL IDENTITY(1,1),
-    Nombre          NVARCHAR(100)  NOT NULL,
-    Descripcion     NVARCHAR(500)  NULL,
-    Velocidad       NVARCHAR(50)   NULL,       -- ej. "50 Mbps"
-    Precio          DECIMAL(10,2)  NOT NULL,
-    PorcentajeDistribucion DECIMAL(5,2) NULL,  -- para reparto de ingresos
-    Estado          NVARCHAR(20)   NOT NULL DEFAULT 'Activo'
-        CONSTRAINT CK_Paquetes_Estado CHECK (Estado IN ('Activo','Inactivo')),
-    FechaCreacion   DATETIME2      NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT PK_PaquetesServicio PRIMARY KEY (IdPaquete)
-);
-
--- ────────────────────────────────────────────────────
---  CLIENTES EXTERNOS (área pública, sin auth)
--- ────────────────────────────────────────────────────
-CREATE TABLE ClientesExternos (
-    IdClienteExterno INT           NOT NULL IDENTITY(1,1),
-    NombreCompleto   NVARCHAR(150) NOT NULL,
-    Telefono         NVARCHAR(20)  NOT NULL,
-    Correo           NVARCHAR(150) NULL,
-    Direccion        NVARCHAR(300) NOT NULL,
-    CONSTRAINT PK_ClientesExternos PRIMARY KEY (IdClienteExterno)
-);
-
--- ────────────────────────────────────────────────────
---  SOLICITUDES DE SERVICIO (formulario público → WhatsApp)
--- ────────────────────────────────────────────────────
-CREATE TABLE SolicitudesServicio (
-    IdSolicitud      INT           NOT NULL IDENTITY(1,1),
-    IdClienteExterno INT           NOT NULL,
-    IdPaquete        INT           NULL,       -- paquete de interés
-    FechaSolicitud   DATETIME2     NOT NULL DEFAULT GETDATE(),
-    Estado           NVARCHAR(30)  NOT NULL DEFAULT 'Pendiente'
-        CONSTRAINT CK_Solicitudes_Estado CHECK (Estado IN ('Pendiente','Atendida','Cancelada')),
-    IdVendedorAsignado INT         NULL,       -- se asigna tras contacto
-    Notas            NVARCHAR(500) NULL,
-    CONSTRAINT PK_SolicitudesServicio   PRIMARY KEY (IdSolicitud),
-    CONSTRAINT FK_Solicitudes_Cliente   FOREIGN KEY (IdClienteExterno)
-        REFERENCES ClientesExternos (IdClienteExterno),
-    CONSTRAINT FK_Solicitudes_Paquete   FOREIGN KEY (IdPaquete)
-        REFERENCES PaquetesServicio (IdPaquete),
-    CONSTRAINT FK_Solicitudes_Vendedor  FOREIGN KEY (IdVendedorAsignado)
-        REFERENCES Usuarios (IdUsuario)
-);
-
--- ────────────────────────────────────────────────────
---  CLIENTES ACTIVOS (registrados por vendedor tras instalación)
--- ────────────────────────────────────────────────────
-CREATE TABLE Clientes (
-    IdCliente        INT           NOT NULL IDENTITY(1,1),
-    NombreCompleto   NVARCHAR(150) NOT NULL,
-    Telefono         NVARCHAR(20)  NOT NULL,
-    Correo           NVARCHAR(150) NULL,
-    Direccion        NVARCHAR(300) NOT NULL,
-    EstadoPago       NVARCHAR(20)  NOT NULL DEFAULT 'AlDia'
-        CONSTRAINT CK_Clientes_EstadoPago CHECK (EstadoPago IN ('AlDia','Moroso','Pendiente')),
-    FechaRegistro    DATETIME2     NOT NULL DEFAULT GETDATE(),
-    IdVendedor       INT           NOT NULL,   -- vendedor que registró
-    IdSolicitudOrigen INT          NULL,       -- trazabilidad desde solicitud
-    Activo           BIT           NOT NULL DEFAULT 1,
-    CONSTRAINT PK_Clientes              PRIMARY KEY (IdCliente),
-    CONSTRAINT FK_Clientes_Vendedor     FOREIGN KEY (IdVendedor)
-        REFERENCES Usuarios (IdUsuario),
-    CONSTRAINT FK_Clientes_Solicitud    FOREIGN KEY (IdSolicitudOrigen)
-        REFERENCES SolicitudesServicio (IdSolicitud)
-);
-
--- ────────────────────────────────────────────────────
---  ASIGNACIONES DE PAQUETE  (cliente ↔ paquete)
--- ────────────────────────────────────────────────────
-CREATE TABLE AsignacionesPaquete (
-    IdAsignacion     INT           NOT NULL IDENTITY(1,1),
-    IdCliente        INT           NOT NULL,
-    IdPaquete        INT           NOT NULL,
-    IdVendedor       INT           NOT NULL,
-    FechaAsignacion  DATETIME2     NOT NULL DEFAULT GETDATE(),
-    FechaVencimiento DATETIME2     NULL,
-    Estado           NVARCHAR(20)  NOT NULL DEFAULT 'Activa'
-        CONSTRAINT CK_Asignaciones_Estado CHECK (Estado IN ('Activa','Suspendida','Cancelada')),
-    CONSTRAINT PK_AsignacionesPaquete   PRIMARY KEY (IdAsignacion),
-    CONSTRAINT FK_Asig_Cliente          FOREIGN KEY (IdCliente)
-        REFERENCES Clientes (IdCliente),
-    CONSTRAINT FK_Asig_Paquete          FOREIGN KEY (IdPaquete)
-        REFERENCES PaquetesServicio (IdPaquete),
-    CONSTRAINT FK_Asig_Vendedor         FOREIGN KEY (IdVendedor)
-        REFERENCES Usuarios (IdUsuario)
-);
-
--- ────────────────────────────────────────────────────
---  TICKETS  (averías, avisos, recordatorios)
--- ────────────────────────────────────────────────────
-CREATE TABLE Tickets (
-    IdTicket         INT           NOT NULL IDENTITY(1,1),
-    Titulo           NVARCHAR(200) NOT NULL,
-    Descripcion      NVARCHAR(1000) NULL,
-    Tipo             NVARCHAR(20)  NOT NULL
-        CONSTRAINT CK_Tickets_Tipo CHECK (Tipo IN ('Averia','Aviso','Recordatorio')),
-    Estado           NVARCHAR(20)  NOT NULL DEFAULT 'Pendiente'
-        CONSTRAINT CK_Tickets_Estado CHECK (Estado IN ('Pendiente','EnProceso','Resuelto')),
-    Prioridad        NVARCHAR(10)  NOT NULL DEFAULT 'Media'
-        CONSTRAINT CK_Tickets_Prioridad CHECK (Prioridad IN ('Alta','Media','Baja')),
-    IdCliente        INT           NULL,       -- NULL si es ticket global
-    IdCreadoPor      INT           NOT NULL,   -- Admin o Técnico
-    IdAsignadoA      INT           NULL,       -- Técnico asignado
-    FechaCreacion    DATETIME2     NOT NULL DEFAULT GETDATE(),
-    FechaActualizacion DATETIME2   NULL,
-    FechaCierre      DATETIME2     NULL,
-    EsGlobal         BIT           NOT NULL DEFAULT 0,  -- avería global visible en área pública
-    CONSTRAINT PK_Tickets            PRIMARY KEY (IdTicket),
-    CONSTRAINT FK_Tickets_Cliente    FOREIGN KEY (IdCliente)
-        REFERENCES Clientes (IdCliente),
-    CONSTRAINT FK_Tickets_CreadoPor  FOREIGN KEY (IdCreadoPor)
-        REFERENCES Usuarios (IdUsuario),
-    CONSTRAINT FK_Tickets_AsignadoA  FOREIGN KEY (IdAsignadoA)
-        REFERENCES Usuarios (IdUsuario)
-);
-
--- ────────────────────────────────────────────────────
---  HISTORIAL DE ESTADOS DE TICKET  (trazabilidad)
--- ────────────────────────────────────────────────────
-CREATE TABLE HistorialTickets (
-    IdHistorial      INT           NOT NULL IDENTITY(1,1),
-    IdTicket         INT           NOT NULL,
-    EstadoAnterior   NVARCHAR(20)  NULL,
-    EstadoNuevo      NVARCHAR(20)  NOT NULL,
-    Comentario       NVARCHAR(500) NULL,
-    IdUsuario        INT           NOT NULL,   -- quién hizo el cambio
-    Fecha            DATETIME2     NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT PK_HistorialTickets   PRIMARY KEY (IdHistorial),
-    CONSTRAINT FK_Historial_Ticket   FOREIGN KEY (IdTicket)
-        REFERENCES Tickets (IdTicket),
-    CONSTRAINT FK_Historial_Usuario  FOREIGN KEY (IdUsuario)
-        REFERENCES Usuarios (IdUsuario)
-);
-
--- ────────────────────────────────────────────────────
---  NOTIFICACIONES
--- ────────────────────────────────────────────────────
-CREATE TABLE Notificaciones (
-    IdNotificacion   INT           NOT NULL IDENTITY(1,1),
-    IdUsuarioDestino INT           NOT NULL,
-    IdTicket         INT           NULL,
-    Mensaje          NVARCHAR(500) NOT NULL,
-    Leida            BIT           NOT NULL DEFAULT 0,
-    FechaEnvio       DATETIME2     NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT PK_Notificaciones        PRIMARY KEY (IdNotificacion),
-    CONSTRAINT FK_Noti_UsuarioDestino   FOREIGN KEY (IdUsuarioDestino)
-        REFERENCES Usuarios (IdUsuario),
-    CONSTRAINT FK_Noti_Ticket           FOREIGN KEY (IdTicket)
-        REFERENCES Tickets (IdTicket)
-);
-
--- ────────────────────────────────────────────────────
---  INGRESOS  (registrados por Administrador)
--- ────────────────────────────────────────────────────
-CREATE TABLE Ingresos (
-    IdIngreso        INT           NOT NULL IDENTITY(1,1),
-    IdCliente        INT           NULL,
-    IdPaquete        INT           NULL,
-    Monto            DECIMAL(10,2) NOT NULL,
-    Fecha            DATETIME2     NOT NULL DEFAULT GETDATE(),
-    Descripcion      NVARCHAR(300) NULL,
-    IdRegistradoPor  INT           NOT NULL,
-    CONSTRAINT PK_Ingresos              PRIMARY KEY (IdIngreso),
-    CONSTRAINT FK_Ingresos_Cliente      FOREIGN KEY (IdCliente)
-        REFERENCES Clientes (IdCliente),
-    CONSTRAINT FK_Ingresos_Paquete      FOREIGN KEY (IdPaquete)
-        REFERENCES PaquetesServicio (IdPaquete),
-    CONSTRAINT FK_Ingresos_Registrado   FOREIGN KEY (IdRegistradoPor)
-        REFERENCES Usuarios (IdUsuario)
-);
-
--- ────────────────────────────────────────────────────
---  VENTAS  (generadas al asignar un paquete)
--- ────────────────────────────────────────────────────
-CREATE TABLE Ventas (
-    IdVenta          INT           NOT NULL IDENTITY(1,1),
-    IdAsignacion     INT           NOT NULL,
-    FechaVenta       DATETIME2     NOT NULL DEFAULT GETDATE(),
-    Monto            DECIMAL(10,2) NOT NULL,
-    Estado           NVARCHAR(20)  NOT NULL DEFAULT 'Activa',
-    PorcentajeDistribucion DECIMAL(5,2) NULL,
-    CONSTRAINT PK_Ventas             PRIMARY KEY (IdVenta),
-    CONSTRAINT FK_Ventas_Asignacion  FOREIGN KEY (IdAsignacion)
-        REFERENCES AsignacionesPaquete (IdAsignacion)
-);
-
--- ────────────────────────────────────────────────────
---  REPORTES
--- ────────────────────────────────────────────────────
-CREATE TABLE Reportes (
-    IdReporte        INT           NOT NULL IDENTITY(1,1),
-    Tipo             NVARCHAR(30)  NOT NULL
-        CONSTRAINT CK_Reportes_Tipo CHECK (Tipo IN ('Ingresos','Clientes','Tickets','Operativo')),
-    Parametros       NVARCHAR(1000) NULL,      -- JSON con filtros aplicados
-    FechaGeneracion  DATETIME2     NOT NULL DEFAULT GETDATE(),
-    IdGeneradoPor    INT           NOT NULL,
-    CONSTRAINT PK_Reportes           PRIMARY KEY (IdReporte),
-    CONSTRAINT FK_Reportes_Usuario   FOREIGN KEY (IdGeneradoPor)
-        REFERENCES Usuarios (IdUsuario)
-);
-CREATE TABLE AuditoriaAcciones (
-    IdAuditoriaAccion INT            NOT NULL IDENTITY(1,1),
-    Tabla             NVARCHAR(100)  NOT NULL,
-    IdRegistro        INT            NULL,
-    Accion            NVARCHAR(50)   NOT NULL,
-    IdUsuario         INT            NOT NULL,
-    Fecha             DATETIME2      NOT NULL DEFAULT GETUTCDATE(),
-    Detalle           NVARCHAR(1000) NULL,
-    CONSTRAINT PK_AuditoriaAcciones      PRIMARY KEY (IdAuditoriaAccion),
-    CONSTRAINT FK_AuditoriaAcciones_User FOREIGN KEY (IdUsuario)
-        REFERENCES Usuarios (IdUsuario)
-);
-
-
-
-
-
--- =============================================
--- FILE: sp_auth.sql
--- =============================================
-
-USE DomusNet;
+DROP PROCEDURE IF EXISTS listarClientes;
 GO
-
--- Agregar columna RefreshToken si no existe (ejecutar una sola vez)
-IF NOT EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID('Usuarios') AND name = 'RefreshToken'
-)
-BEGIN
-    ALTER TABLE Usuarios ADD RefreshToken NVARCHAR(255) NULL;
-END
-GO
-
--- ── AUTH / TOKENS ────────────────────────────────────────
-
-CREATE OR ALTER PROCEDURE modificarToken
-    @IdUsuario      INT,
-    @RefreshToken   NVARCHAR(255)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    UPDATE Usuarios
-    SET RefreshToken = @RefreshToken,
-        FechaModificacion = GETUTCDATE()
-    WHERE IdUsuario = @IdUsuario;
-END
-GO
-
-CREATE OR ALTER PROCEDURE verificarTokenR
-    @IdUsuario      INT,
-    @RefreshToken   NVARCHAR(255)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT IdRol
-    FROM Usuarios
-    WHERE IdUsuario = @IdUsuario
-      AND RefreshToken = @RefreshToken
-      AND Activo = 1;
-END
-GO
-
-CREATE OR ALTER PROCEDURE buscarUsuarioLogin
-    @Correo NVARCHAR(150)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT u.IdUsuario, u.Nombre, u.Correo, u.Contrasena, u.Telefono,
-           u.IdRol, u.Activo, r.NombreRol
-    FROM Usuarios u
-    INNER JOIN Roles r ON u.IdRol = r.IdRol
-    WHERE u.Correo = @Correo AND u.Activo = 1;
-END
-GO
-
-
-
-
--- =============================================
--- FILE: sp_clientes.sql
--- =============================================
-
-USE DomusNet;
-GO
-
-CREATE OR ALTER PROCEDURE listarClientes
+CREATE OR ALTER PROCEDURE dbo.listarClientes
     @EstadoPago NVARCHAR(20) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT c.IdCliente, c.NombreCompleto, c.Telefono, c.Correo, c.Direccion,
-           c.EstadoPago, c.FechaRegistro, c.IdVendedor, u.Nombre AS NombreVendedor, c.Activo
-    FROM Clientes c
-    INNER JOIN Usuarios u ON c.IdVendedor = u.IdUsuario
-    WHERE (@EstadoPago IS NULL OR c.EstadoPago = @EstadoPago)
-      AND c.Activo = 1
+
+    SELECT 
+        c.IdCliente,
+        c.NombreCompleto,
+        c.Telefono,
+        c.Correo,
+        c.Direccion,
+        c.EstadoPago,
+        c.FechaRegistro,
+        c.Activo,
+
+        u.Nombre AS NombreVendedor,
+
+        p.Nombre AS NombrePaquete,
+        p.Velocidad,
+        p.Precio,
+
+        ap.FechaAsignacion,
+        ap.Estado AS EstadoAsignacion
+
+    FROM dbo.Clientes c
+
+    INNER JOIN dbo.Usuarios u
+        ON c.IdVendedor = u.IdUsuario
+
+    LEFT JOIN dbo.AsignacionesPaquete ap
+        ON c.IdCliente = ap.IdCliente
+       AND ap.Estado = 'Activa'
+
+    LEFT JOIN dbo.PaquetesServicio p
+        ON ap.IdPaquete = p.IdPaquete
+
+    WHERE c.Activo = 1
+      AND (@EstadoPago IS NULL OR c.EstadoPago = @EstadoPago)
+
     ORDER BY c.NombreCompleto;
-END
+END;
 GO
 
 CREATE OR ALTER PROCEDURE buscarCliente
@@ -621,6 +319,24 @@ GO
 -- FILE: sp_paquetes.sql
 -- =============================================
 
+UPDATE dbo.SolicitudesServicio
+SET 
+    Estado = 'Realizada',
+    Notas = 'Instalación realizada por el técnico. Lista para convertir a cliente.'
+WHERE IdSolicitud = 14;
+GO
+
+
+SELECT 
+    s.IdSolicitud,
+    s.Estado AS EstadoSolicitud,
+    i.IdInstalacion,
+    i.Estado AS EstadoInstalacion
+FROM dbo.SolicitudesServicio s
+INNER JOIN dbo.InstalacionesProgramadas i
+    ON s.IdSolicitud = i.IdSolicitud
+WHERE s.IdSolicitud = 14;
+
 USE DomusNet;
 GO
 
@@ -830,9 +546,10 @@ BEGIN
 END
 GO
 
+SELECT IdUsuario, Nombre, RefreshToken FROM Usuarios WHERE IdUsuario = 1;
 
 
-
+SELECT * FROM PaquetesServicio
 -- =============================================
 -- FILE: sp_solicitudes.sql
 -- =============================================
@@ -903,7 +620,6 @@ BEGIN
     SELECT 1 AS Resultado;
 END
 GO
-
 
 
 
@@ -1000,7 +716,7 @@ BEGIN
 END
 GO
 
--- Retorna: 1=ok, 0=no existe
+
 CREATE OR ALTER PROCEDURE actualizarEstadoTicket
     @IdTicket       INT,
     @EstadoNuevo    NVARCHAR(20),
@@ -1229,17 +945,899 @@ ELSE
     PRINT 'El admin ya existe.';
 GO
 
--- Paquetes de ejemplo (para que /api/paquetes no devuelva array vacio)
+-- Paquetes
 IF NOT EXISTS (SELECT 1 FROM PaquetesServicio)
 BEGIN
     INSERT INTO PaquetesServicio (Nombre, Descripcion, Velocidad, Precio, PorcentajeDistribucion, Estado, FechaCreacion)
     VALUES
-        ('Plan Basico 25 Mbps',  'Internet basico',  '25 Mbps',  10000, 10, 'Activo', GETUTCDATE()),
-        ('Plan Familiar 50 Mbps','Internet familiar', '50 Mbps',  15000, 10, 'Activo', GETUTCDATE()),
-        ('Plan Premium 100 Mbps','Internet premium',  '100 Mbps', 25000, 10, 'Activo', GETUTCDATE());
-    PRINT 'Paquetes de ejemplo insertados.';
+        ('Plan Económico',  'Internet Económico',  '10/8 Mbss',  22000, 10, 'Activo', GETUTCDATE()),
+        ('Plan Básico','Internet Básico', '15/10 Mbss',  25000, 10, 'Activo', GETUTCDATE()),
+        ('Plan Regular ','Internet Regular',  '20/25 Mbss', 29900, 10, 'Activo', GETUTCDATE()),
+		('Plan Profesional','Internet Profesional',  '30/20 Mbss',41000, 10, 'Activo', GETUTCDATE())
+END
+GO
+CREATE OR ALTER PROCEDURE listarTecnicosActivos
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        u.IdUsuario,
+        u.Nombre,
+        u.Correo,
+        u.Telefono
+    FROM Usuarios u
+    INNER JOIN Roles r 
+        ON u.IdRol = r.IdRol
+    WHERE r.NombreRol = 'Tecnico'
+      AND u.Activo = 1
+    ORDER BY u.Nombre;
 END
 GO
 
 
 
+
+DROP PROCEDURE IF EXISTS dbo.programarInstalacion;
+GO
+CREATE OR ALTER PROCEDURE dbo.programarInstalacion
+    @IdSolicitud INT,
+    @IdTecnicoAsignado INT,
+    @IdVendedorPrograma INT,
+    @FechaProgramada DATETIME2,
+    @UbicacionInstalacion NVARCHAR(500) = NULL,
+    @NotasVendedor NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @IdInstalacion INT;
+
+        -- Validar que la solicitud exista y esté atendida
+        IF NOT EXISTS (
+            SELECT 1
+            FROM dbo.SolicitudesServicio
+            WHERE IdSolicitud = @IdSolicitud
+              AND Estado = 'Atendida'
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                0 AS Resultado,
+                NULL AS IdInstalacion,
+                'La solicitud no existe o no está atendida.' AS Mensaje;
+            RETURN;
+        END
+
+        -- Evitar programar dos veces la misma solicitud
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.InstalacionesProgramadas
+            WHERE IdSolicitud = @IdSolicitud
+              AND Estado IN ('Programada', 'Completada')
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -3 AS Resultado,
+                NULL AS IdInstalacion,
+                'La solicitud ya tiene una instalación programada o completada.' AS Mensaje;
+            RETURN;
+        END
+
+        -- Validar que el técnico exista y sea técnico activo
+        IF NOT EXISTS (
+            SELECT 1
+            FROM dbo.Usuarios u
+            INNER JOIN dbo.Roles r 
+                ON u.IdRol = r.IdRol
+            WHERE u.IdUsuario = @IdTecnicoAsignado
+              AND r.NombreRol = 'Tecnico'
+              AND u.Activo = 1
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -1 AS Resultado,
+                NULL AS IdInstalacion,
+                'El usuario seleccionado no es un técnico activo.' AS Mensaje;
+            RETURN;
+        END
+
+-- Validar que quien programa sea vendedor o administrador activo
+IF NOT EXISTS (
+    SELECT 1
+    FROM dbo.Usuarios u
+    INNER JOIN dbo.Roles r 
+        ON u.IdRol = r.IdRol
+    WHERE u.IdUsuario = @IdVendedorPrograma
+      AND r.NombreRol IN ('Vendedor', 'Administrador')
+      AND u.Activo = 1
+)
+BEGIN
+    ROLLBACK TRANSACTION;
+
+    SELECT 
+        -2 AS Resultado,
+        NULL AS IdInstalacion,
+        'El usuario seleccionado no tiene permisos para programar instalaciones.' AS Mensaje;
+    RETURN;
+END
+
+        -- Crear instalación programada
+        INSERT INTO dbo.InstalacionesProgramadas (
+            IdSolicitud,
+            IdTecnicoAsignado,
+            IdVendedorPrograma,
+            FechaProgramada,
+            UbicacionInstalacion,
+            Estado,
+            NotasVendedor
+        )
+        VALUES (
+            @IdSolicitud,
+            @IdTecnicoAsignado,
+            @IdVendedorPrograma,
+            @FechaProgramada,
+            @UbicacionInstalacion,
+            'Programada',
+            @NotasVendedor
+        );
+
+        SET @IdInstalacion = SCOPE_IDENTITY();
+
+        -- Cambiar la solicitud a Programada
+        UPDATE dbo.SolicitudesServicio
+        SET 
+            Estado = 'Programada',
+            IdVendedorAsignado = @IdVendedorPrograma,
+            Notas = COALESCE(@NotasVendedor, Notas)
+        WHERE IdSolicitud = @IdSolicitud;
+
+        COMMIT TRANSACTION;
+
+        SELECT 
+            1 AS Resultado,
+            @IdInstalacion AS IdInstalacion,
+            'Instalación programada correctamente.' AS Mensaje;
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT 
+            -99 AS Resultado,
+            NULL AS IdInstalacion,
+            ERROR_MESSAGE() AS Mensaje;
+    END CATCH
+END;
+GO
+
+
+-- ────────────────────────────────────────────────────
+--  LISTAR INSTALACIONES POR TÉCNICO
+-- ────────────────────────────────────────────────────
+CREATE OR ALTER PROCEDURE listarInstalacionesPorTecnico
+    @IdTecnico INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        i.IdInstalacion,
+        i.IdSolicitud,
+
+        i.IdTecnicoAsignado,
+        i.IdVendedorPrograma,
+
+        i.FechaProgramada,
+        i.FechaRealizacion,
+
+        i.UbicacionInstalacion,
+        i.FotoEvidencia,
+        i.PruebaVelocidad,
+
+        i.Estado,
+        i.NotasVendedor,
+        i.ComentarioTecnico,
+        i.FechaCreacion,
+        i.FechaActualizacion,
+
+        ce.NombreCompleto AS NombreCliente,
+        ce.NombreCompleto,
+        ce.Telefono,
+        ce.Correo,
+        ce.Direccion,
+
+        p.Nombre AS NombrePaquete
+
+    FROM dbo.InstalacionesProgramadas i
+    INNER JOIN dbo.SolicitudesServicio s
+        ON i.IdSolicitud = s.IdSolicitud
+
+    INNER JOIN dbo.ClientesExternos ce
+        ON s.IdClienteExterno = ce.IdClienteExterno
+
+    LEFT JOIN dbo.PaquetesServicio p
+        ON s.IdPaquete = p.IdPaquete
+
+    WHERE i.IdTecnicoAsignado = @IdTecnico
+      AND i.Estado IN ('Programada', 'Reprogramada', 'Realizada')
+
+    ORDER BY 
+        i.FechaProgramada ASC,
+        i.IdInstalacion ASC;
+END;
+GO
+
+DROP PROCEDURE IF EXISTS completarInstalacion;
+GO
+
+
+CREATE OR ALTER PROCEDURE dbo.completarInstalacion
+    @IdInstalacion      INT,
+    @FotoEvidencia      NVARCHAR(MAX),
+    @PruebaVelocidad    NVARCHAR(500),
+    @ComentarioTecnico  NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @IdSolicitud INT;
+
+        SELECT 
+            @IdSolicitud = IdSolicitud
+        FROM dbo.InstalacionesProgramadas
+        WHERE IdInstalacion = @IdInstalacion
+          AND Estado IN ('Programada', 'Reprogramada');
+
+        IF @IdSolicitud IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -1 AS Resultado, 
+                'La instalación no existe o no está en estado válido para realizarse.' AS Mensaje, 
+                @IdInstalacion AS IdInstalacion;
+
+            RETURN;
+        END
+
+        IF @FotoEvidencia IS NULL OR LTRIM(RTRIM(@FotoEvidencia)) = ''
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -2 AS Resultado, 
+                'Debe ingresar la foto de evidencia.' AS Mensaje, 
+                @IdInstalacion AS IdInstalacion;
+
+            RETURN;
+        END
+
+        IF @PruebaVelocidad IS NULL OR LTRIM(RTRIM(@PruebaVelocidad)) = ''
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -3 AS Resultado, 
+                'Debe ingresar la prueba de velocidad.' AS Mensaje, 
+                @IdInstalacion AS IdInstalacion;
+
+            RETURN;
+        END
+
+        UPDATE dbo.InstalacionesProgramadas
+        SET 
+            Estado = 'Realizada',
+            FechaRealizacion = GETDATE(),
+            FotoEvidencia = @FotoEvidencia,
+            PruebaVelocidad = @PruebaVelocidad,
+            ComentarioTecnico = @ComentarioTecnico,
+            FechaActualizacion = GETDATE()
+        WHERE IdInstalacion = @IdInstalacion;
+
+        UPDATE dbo.SolicitudesServicio
+        SET
+            Estado = 'Realizada',
+            Notas = 'Instalación realizada por el técnico. Lista para convertir a cliente.'
+        WHERE IdSolicitud = @IdSolicitud;
+
+        COMMIT TRANSACTION;
+
+        SELECT 
+            1 AS Resultado, 
+            'Instalación realizada correctamente. Ya puede ser convertida a cliente por el vendedor.' AS Mensaje, 
+            @IdInstalacion AS IdInstalacion;
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT 
+            -99 AS Resultado, 
+            ERROR_MESSAGE() AS Mensaje, 
+            @IdInstalacion AS IdInstalacion;
+    END CATCH
+END;
+GO
+
+DROP PROCEDURE IF EXISTS dbo.convertirSolicitudEnCliente;
+GO
+CREATE OR ALTER PROCEDURE dbo.convertirSolicitudEnCliente
+    @IdSolicitud INT,
+    @IdVendedor INT,
+    @Notas NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE 
+            @IdClienteExterno INT,
+            @IdPaquete INT,
+            @Estado NVARCHAR(30),
+            @NombreCompleto NVARCHAR(150),
+            @Telefono NVARCHAR(20),
+            @Correo NVARCHAR(150),
+            @Direccion NVARCHAR(300),
+            @IdCliente INT,
+            @IdAsignacion INT,
+            @Precio DECIMAL(10,2),
+            @Porcentaje DECIMAL(5,2),
+            @IdInstalacion INT,
+            @EstadoInstalacion NVARCHAR(30),
+            @FotoEvidencia NVARCHAR(500),
+            @PruebaVelocidad NVARCHAR(300),
+            @FechaRealizacion DATETIME2;
+
+        SELECT 
+            @IdClienteExterno = s.IdClienteExterno,
+            @IdPaquete = s.IdPaquete,
+            @Estado = s.Estado,
+            @NombreCompleto = ce.NombreCompleto,
+            @Telefono = ce.Telefono,
+            @Correo = ce.Correo,
+            @Direccion = ce.Direccion
+        FROM dbo.SolicitudesServicio s
+        INNER JOIN dbo.ClientesExternos ce
+            ON s.IdClienteExterno = ce.IdClienteExterno
+        WHERE s.IdSolicitud = @IdSolicitud;
+
+        IF @IdClienteExterno IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT 0 AS Resultado, 0 AS IdGenerado, 'La solicitud no existe.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @Estado = 'Cancelada'
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -1 AS Resultado, 0 AS IdGenerado, 'La solicitud está cancelada.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @Estado = 'Convertida'
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -2 AS Resultado, 0 AS IdGenerado, 'La solicitud ya fue convertida en cliente.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @Estado <> 'Realizada'
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -12 AS Resultado, 0 AS IdGenerado, 'La solicitud todavía no está realizada. Primero el técnico debe completar la instalación.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @IdPaquete IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -3 AS Resultado, 0 AS IdGenerado, 'La solicitud no tiene paquete asignado.' AS Mensaje;
+            RETURN;
+        END
+
+        SELECT TOP 1
+            @IdInstalacion = IdInstalacion,
+            @EstadoInstalacion = Estado,
+            @FotoEvidencia = FotoEvidencia,
+            @PruebaVelocidad = PruebaVelocidad,
+            @FechaRealizacion = FechaRealizacion
+        FROM dbo.InstalacionesProgramadas
+        WHERE IdSolicitud = @IdSolicitud
+        ORDER BY IdInstalacion DESC;
+
+        IF @IdInstalacion IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -5 AS Resultado, 0 AS IdGenerado, 'La solicitud no tiene instalación programada.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @EstadoInstalacion <> 'Realizada'
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -6 AS Resultado, 0 AS IdGenerado, 'La instalación aún no está realizada.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @FechaRealizacion IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -7 AS Resultado, 0 AS IdGenerado, 'La instalación no tiene fecha de realización.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @FotoEvidencia IS NULL OR LTRIM(RTRIM(@FotoEvidencia)) = ''
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -8 AS Resultado, 0 AS IdGenerado, 'Falta la foto de evidencia.' AS Mensaje;
+            RETURN;
+        END
+
+        IF @PruebaVelocidad IS NULL OR LTRIM(RTRIM(@PruebaVelocidad)) = ''
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -9 AS Resultado, 0 AS IdGenerado, 'Falta la prueba de velocidad.' AS Mensaje;
+            RETURN;
+        END
+
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Clientes
+            WHERE IdSolicitudOrigen = @IdSolicitud
+              AND Activo = 1
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -10 AS Resultado, 0 AS IdGenerado, 'Esta solicitud ya fue convertida en cliente.' AS Mensaje;
+            RETURN;
+        END
+
+        IF EXISTS (
+            SELECT 1
+            FROM dbo.Clientes
+            WHERE Telefono = @Telefono
+              AND Activo = 1
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -4 AS Resultado, 0 AS IdGenerado, 'Ya existe un cliente activo con ese teléfono.' AS Mensaje;
+            RETURN;
+        END
+
+        SELECT 
+            @Precio = Precio,
+            @Porcentaje = PorcentajeDistribucion
+        FROM dbo.PaquetesServicio
+        WHERE IdPaquete = @IdPaquete;
+
+        IF @Precio IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -11 AS Resultado, 0 AS IdGenerado, 'El paquete no existe o no tiene precio.' AS Mensaje;
+            RETURN;
+        END
+
+        INSERT INTO dbo.Clientes (
+            NombreCompleto,
+            Telefono,
+            Correo,
+            Direccion,
+            EstadoPago,
+            FechaRegistro,
+            IdVendedor,
+            IdSolicitudOrigen,
+            Activo
+        )
+        VALUES (
+            @NombreCompleto,
+            @Telefono,
+            @Correo,
+            @Direccion,
+            'Pendiente',
+            GETUTCDATE(),
+            @IdVendedor,
+            @IdSolicitud,
+            1
+        );
+
+        SET @IdCliente = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.AsignacionesPaquete (
+            IdCliente,
+            IdPaquete,
+            IdVendedor,
+            FechaAsignacion,
+            Estado
+        )
+        VALUES (
+            @IdCliente,
+            @IdPaquete,
+            @IdVendedor,
+            GETUTCDATE(),
+            'Activa'
+        );
+
+        SET @IdAsignacion = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.Ventas (
+            IdAsignacion,
+            FechaVenta,
+            Monto,
+            Estado,
+            PorcentajeDistribucion
+        )
+        VALUES (
+            @IdAsignacion,
+            GETUTCDATE(),
+            @Precio,
+            'Activa',
+            @Porcentaje
+        );
+
+        UPDATE dbo.SolicitudesServicio
+        SET 
+            Estado = 'Convertida',
+            IdVendedorAsignado = @IdVendedor,
+            Notas = COALESCE(@Notas, 'Solicitud convertida en cliente activo.')
+        WHERE IdSolicitud = @IdSolicitud;
+
+        COMMIT TRANSACTION;
+
+        SELECT 
+            1 AS Resultado, 
+            @IdCliente AS IdGenerado, 
+            'Cliente activado correctamente.' AS Mensaje;
+
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT 
+            -99 AS Resultado, 
+            0 AS IdGenerado, 
+            ERROR_MESSAGE() AS Mensaje;
+    END CATCH
+END;
+GO
+
+
+
+DROP PROCEDURE IF EXISTS dbo.listarInstalacionesGenerales;
+GO
+CREATE OR ALTER PROCEDURE dbo.listarInstalacionesGenerales
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        i.IdInstalacion,
+        i.IdSolicitud,
+
+        s.Estado AS EstadoSolicitud,
+
+        i.IdTecnicoAsignado,
+        tecnico.Nombre AS NombreTecnico,
+
+        i.IdVendedorPrograma,
+        vendedor.Nombre AS NombreVendedor,
+
+        i.FechaProgramada,
+        i.FechaRealizacion,
+
+        i.UbicacionInstalacion,
+        i.FotoEvidencia,
+        i.PruebaVelocidad,
+
+        i.Estado,
+        i.NotasVendedor,
+        i.ComentarioTecnico,
+
+        ce.NombreCompleto AS NombreCliente,
+        ce.NombreCompleto,
+        ce.Telefono,
+        ce.Correo,
+        ce.Direccion,
+
+        p.Nombre AS NombrePaquete
+
+    FROM dbo.InstalacionesProgramadas i
+    INNER JOIN dbo.SolicitudesServicio s
+        ON i.IdSolicitud = s.IdSolicitud
+
+    INNER JOIN dbo.ClientesExternos ce
+        ON s.IdClienteExterno = ce.IdClienteExterno
+
+    LEFT JOIN dbo.PaquetesServicio p
+        ON s.IdPaquete = p.IdPaquete
+
+    INNER JOIN dbo.Usuarios tecnico
+        ON i.IdTecnicoAsignado = tecnico.IdUsuario
+
+    INNER JOIN dbo.Usuarios vendedor
+        ON i.IdVendedorPrograma = vendedor.IdUsuario
+
+    ORDER BY 
+        i.FechaProgramada DESC,
+        i.IdInstalacion DESC;
+END;
+GO
+
+
+
+----------------------------
+--Apartado de ingresos
+DROP PROCEDURE IF EXISTS dbo.listarClientesParaIngreso;
+GO
+
+CREATE OR ALTER PROCEDURE dbo.listarClientesParaIngreso
+AS
+BEGIN
+    SET NOCOUNT ON;
+	EXEC dbo.actualizarEstadosPagoClientes;
+    SELECT
+        c.IdCliente,
+        c.NombreCompleto,
+        c.Telefono,
+        c.Correo,
+        c.EstadoPago,
+
+        ap.IdAsignacion,
+        ap.FechaVencimiento,
+        ap.Estado AS EstadoAsignacion,
+
+        p.IdPaquete,
+        p.Nombre AS NombrePaquete,
+        p.Velocidad,
+        p.Precio
+
+    FROM dbo.Clientes c
+    INNER JOIN dbo.AsignacionesPaquete ap
+        ON c.IdCliente = ap.IdCliente
+       AND ap.Estado = 'Activa'
+
+    INNER JOIN dbo.PaquetesServicio p
+        ON ap.IdPaquete = p.IdPaquete
+
+    WHERE c.Activo = 1
+      AND c.EstadoPago = 'Pendiente'
+
+    ORDER BY c.NombreCompleto;
+END;
+GO
+
+
+
+CREATE OR ALTER PROCEDURE dbo.actualizarEstadosPagoClientes
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE c
+    SET c.EstadoPago = 'Pendiente'
+    FROM dbo.Clientes c
+    INNER JOIN dbo.AsignacionesPaquete ap
+        ON c.IdCliente = ap.IdCliente
+       AND ap.Estado = 'Activa'
+    WHERE c.Activo = 1
+      AND c.EstadoPago = 'AlDia'
+      AND CAST(ap.FechaVencimiento AS DATE) <= CAST(GETDATE() AS DATE);
+END;
+GO
+
+
+
+
+CREATE OR ALTER PROCEDURE dbo.registrarIngresoCliente
+    @IdCliente INT,
+    @Monto DECIMAL(10,2),
+    @MetodoPago NVARCHAR(50),
+    @ReferenciaPago NVARCHAR(100) = NULL,
+    @Descripcion NVARCHAR(300) = NULL,
+    @IdRegistradoPor INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE
+            @IdPaquete INT,
+            @IdAsignacion INT,
+            @Precio DECIMAL(10,2),
+            @FechaPago DATETIME2,
+            @FechaVencimientoActual DATETIME2,
+            @FechaProximoPago DATETIME2,
+            @IdIngreso INT;
+
+        SET @FechaPago = GETDATE();
+
+        SELECT TOP 1
+            @IdAsignacion = ap.IdAsignacion,
+            @IdPaquete = ap.IdPaquete,
+            @FechaVencimientoActual = ap.FechaVencimiento,
+            @Precio = p.Precio
+        FROM dbo.AsignacionesPaquete ap
+        INNER JOIN dbo.PaquetesServicio p
+            ON ap.IdPaquete = p.IdPaquete
+        WHERE ap.IdCliente = @IdCliente
+          AND ap.Estado = 'Activa'
+        ORDER BY ap.IdAsignacion DESC;
+
+        IF @IdAsignacion IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -1 AS Resultado,
+                0 AS IdGenerado,
+                'El cliente no tiene un paquete activo asignado.' AS Mensaje,
+                NULL AS FechaProximoPago;
+
+            RETURN;
+        END
+
+        IF @Monto <= 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -2 AS Resultado,
+                0 AS IdGenerado,
+                'El monto debe ser mayor a cero.' AS Mensaje,
+                NULL AS FechaProximoPago;
+
+            RETURN;
+        END
+
+        IF @MetodoPago IS NULL OR LTRIM(RTRIM(@MetodoPago)) = ''
+        BEGIN
+            ROLLBACK TRANSACTION;
+
+            SELECT 
+                -3 AS Resultado,
+                0 AS IdGenerado,
+                'Debe seleccionar un método de pago.' AS Mensaje,
+                NULL AS FechaProximoPago;
+
+            RETURN;
+        END
+
+        -- Si el cliente paga antes de vencer, se suma un mes a la fecha actual de vencimiento.
+        -- Si ya venció o no tiene fecha, se suma un mes desde hoy.
+        IF @FechaVencimientoActual IS NOT NULL 
+           AND CAST(@FechaVencimientoActual AS DATE) >= CAST(@FechaPago AS DATE)
+        BEGIN
+            SET @FechaProximoPago = DATEADD(MONTH, 1, @FechaVencimientoActual);
+        END
+        ELSE
+        BEGIN
+            SET @FechaProximoPago = DATEADD(MONTH, 1, @FechaPago);
+        END
+
+        INSERT INTO dbo.Ingresos
+        (
+            IdCliente,
+            IdPaquete,
+            Monto,
+            Fecha,
+            Descripcion,
+            IdRegistradoPor,
+            TipoIngreso,
+            MetodoPago,
+            Estado,
+            ReferenciaPago,
+            FechaProximoPago
+        )
+        VALUES
+        (
+            @IdCliente,
+            @IdPaquete,
+            @Monto,
+            @FechaPago,
+            COALESCE(@Descripcion, 'Pago mensual de servicio'),
+            @IdRegistradoPor,
+            'Mensualidad',
+            @MetodoPago,
+            'Registrado',
+            @ReferenciaPago,
+            @FechaProximoPago
+        );
+
+        SET @IdIngreso = SCOPE_IDENTITY();
+
+        UPDATE dbo.Clientes
+        SET EstadoPago = 'AlDia'
+        WHERE IdCliente = @IdCliente;
+
+        UPDATE dbo.AsignacionesPaquete
+        SET FechaVencimiento = @FechaProximoPago
+        WHERE IdAsignacion = @IdAsignacion;
+
+        COMMIT TRANSACTION;
+
+        SELECT 
+            1 AS Resultado,
+            @IdIngreso AS IdGenerado,
+            'Ingreso registrado correctamente.' AS Mensaje,
+            @FechaProximoPago AS FechaProximoPago;
+
+    END TRY
+    BEGIN CATCH
+
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT 
+            -99 AS Resultado,
+            0 AS IdGenerado,
+            ERROR_MESSAGE() AS Mensaje,
+            NULL AS FechaProximoPago;
+
+    END CATCH
+END;
+GO
+
+
+
+
+
+CREATE OR ALTER PROCEDURE dbo.listarIngresos
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        i.IdIngreso,
+        i.IdCliente,
+        c.NombreCompleto AS NombreCliente,
+        c.EstadoPago AS EstadoPago,
+
+        i.IdPaquete,
+        p.Nombre AS NombrePaquete,
+        p.Velocidad,
+
+        i.Monto,
+        i.Fecha,
+        i.Descripcion,
+        i.TipoIngreso,
+        i.MetodoPago,
+        i.Estado,
+        i.ReferenciaPago,
+        i.FechaProximoPago,
+
+        i.IdRegistradoPor,
+        u.Nombre AS NombreRegistradoPor
+
+    FROM dbo.Ingresos i
+
+    LEFT JOIN dbo.Clientes c
+        ON i.IdCliente = c.IdCliente
+
+    LEFT JOIN dbo.PaquetesServicio p
+        ON i.IdPaquete = p.IdPaquete
+
+    INNER JOIN dbo.Usuarios u
+        ON i.IdRegistradoPor = u.IdUsuario
+
+    ORDER BY i.Fecha DESC, i.IdIngreso DESC;
+END;
+GO
