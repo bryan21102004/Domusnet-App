@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 namespace DomusNet.API.Services;
 
-public class SolicitudesService
+public class SolicitudesService : Interfaces.ISolicitudesService
 {
     private readonly DomusNetDBContext _context;
 

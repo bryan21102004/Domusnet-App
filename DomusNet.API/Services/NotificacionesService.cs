@@ -4,7 +4,7 @@ using DomusNet.API.Data;
 
 namespace DomusNet.API.Services;
 
-public class NotificacionesService
+public class NotificacionesService : Interfaces.INotificacionesService
 {
     private readonly DomusNetDBContext _context;
 

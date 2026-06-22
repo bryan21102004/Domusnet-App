@@ -6,17 +6,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace DomusNet.API.Services;
-
-public class TicketsService
+public class TicketsService : Interfaces.ITicketsService
 {
     private readonly DomusNetDBContext _context;
-    private readonly EmailService _emailService;
+    private readonly Interfaces.IEmailService _emailService;
     private readonly ILogger<TicketsService> _logger;
     private readonly int _idUsuarioSistema;
 
     public TicketsService(
         DomusNetDBContext context,
-        EmailService emailService,
+        Interfaces.IEmailService emailService,
         ILogger<TicketsService> logger,
         IConfiguration configuration)
     {

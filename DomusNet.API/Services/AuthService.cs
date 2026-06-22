@@ -11,7 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace DomusNet.API.Services;
 
-public class AuthService
+public class AuthService : Interfaces.IAuthService
 {
     private readonly DomusNetDBContext _context;
     private readonly IConfiguration _config;

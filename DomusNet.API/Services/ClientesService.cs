@@ -5,7 +5,7 @@ using DomusNet.API.DTOs;
 
 namespace DomusNet.API.Services;
 
-public class ClientesService
+public class ClientesService : Interfaces.IClientesService
 {
     private readonly DomusNetDBContext _context;
 

@@ -5,7 +5,7 @@ using DomusNet.API.Models;
 
 namespace DomusNet.API.Services;
 
-public class InstalacionService
+public class InstalacionService : Interfaces.IInstalacionService
 {
     private readonly DomusNetDBContext _context;
 

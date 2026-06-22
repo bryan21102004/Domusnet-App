@@ -1,5 +1,5 @@
 using DomusNet.API.DTOs;
-using DomusNet.API.Services;
+using DomusNet.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,9 +9,9 @@ namespace DomusNet.API.Controllers;
 [Route("api/[controller]")]
 public class TicketsController : ControllerBase
 {
-    private readonly TicketsService _service;
+    private readonly ITicketsService _service;
 
-    public TicketsController(TicketsService service)
+    public TicketsController(ITicketsService service)
     {
         _service = service;
     }
@@ -26,7 +26,9 @@ public class TicketsController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Administrador,Tecnico")]
-    public async Task<IActionResult> Listar([FromQuery] string? estado = null, [FromQuery] int? idAsignadoA = null)
+    public async Task<IActionResult> Listar(
+        [FromQuery] string? estado = null,
+        [FromQuery] int? idAsignadoA = null)
     {
         var data = await _service.ListarAsync(estado, idAsignadoA);
         return Ok(data);
@@ -39,7 +41,9 @@ public class TicketsController : ControllerBase
         var data = await _service.BuscarAsync(id);
 
         if (data == null)
+        {
             return NotFound(new { mensaje = "Ticket no encontrado" });
+        }
 
         return Ok(data);
     }
@@ -96,7 +100,9 @@ public class TicketsController : ControllerBase
 
     [HttpPut("{id}/estado")]
     [Authorize(Roles = "Administrador,Tecnico")]
-    public async Task<IActionResult> ActualizarEstado(int id, [FromBody] ActualizarEstadoTicketDto dto)
+    public async Task<IActionResult> ActualizarEstado(
+        int id,
+        [FromBody] ActualizarEstadoTicketDto dto)
     {
         var result = await _service.ActualizarEstadoAsync(id, dto);
 

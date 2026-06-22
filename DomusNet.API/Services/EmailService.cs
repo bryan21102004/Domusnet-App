@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace DomusNet.API.Services;
 
-public class EmailService
+public class EmailService : Interfaces.IEmailService
 {
     private readonly IConfiguration _config;
     private readonly ILogger<EmailService> _logger;

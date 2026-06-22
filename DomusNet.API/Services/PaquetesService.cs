@@ -6,7 +6,7 @@ using DomusNet.API.Data.Models;
 
 namespace DomusNet.API.Services;
 
-public class PaquetesService
+public class PaquetesService : Interfaces.IPaquetesService
 {
     private readonly DomusNetDBContext _context;
 

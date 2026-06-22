@@ -4,13 +4,12 @@ using DomusNet.API.Data;
 using DomusNet.API.DTOs;
 
 namespace DomusNet.API.Services;
-
-public class UsuariosService
+public class UsuariosService : Interfaces.IUsuariosService
 {
     private readonly DomusNetDBContext _context;
-    private readonly AuthService _authService;
+    private readonly Interfaces.IAuthService _authService;
 
-    public UsuariosService(DomusNetDBContext context, AuthService authService)
+    public UsuariosService(DomusNetDBContext context, Interfaces.IAuthService authService)
     {
         _context = context;
         _authService = authService;

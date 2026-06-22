@@ -6,7 +6,7 @@ using DomusNet.API.Models;
 
 namespace DomusNet.API.Services;
 
-public class ReportesService
+public class ReportesService : Interfaces.IReportesService
 {
     private readonly DomusNetDBContext _context;
 

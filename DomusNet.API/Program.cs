@@ -1,6 +1,7 @@
 using System.Text;
 using DomusNet.API.Data;
 using DomusNet.API.Services;
+using DomusNet.API.Services.Interfaces;
 using DomusNet.API.Services.ReglasNegocio;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -22,19 +23,19 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<DomusNetDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConexionSQL")));
 
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<UsuariosService>();
-builder.Services.AddScoped<PaquetesService>();
-builder.Services.AddScoped<ClientesService>();
-builder.Services.AddScoped<TicketsService>();
-builder.Services.AddScoped<SolicitudesService>();
-builder.Services.AddScoped<ValidacionesGenerales>();
-builder.Services.AddScoped<InstalacionService>();
-builder.Services.AddSingleton<EmailService>();
-builder.Services.AddScoped<SolicitudesService>();
-builder.Services.AddScoped<IngresosService>();
-builder.Services.AddScoped<ReportesService>();
-builder.Services.AddScoped<NotificacionesService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUsuariosService, UsuariosService>();
+builder.Services.AddScoped<IPaquetesService, PaquetesService>();
+builder.Services.AddScoped<IClientesService, ClientesService>();
+builder.Services.AddScoped<ITicketsService, TicketsService>();
+builder.Services.AddScoped<ISolicitudesService, SolicitudesService>();
+builder.Services.AddScoped< ValidacionesGenerales>();
+builder.Services.AddScoped<IInstalacionService, InstalacionService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddScoped<IIngresosService, IngresosService>();
+builder.Services.AddScoped<IReportesService, ReportesService>();
+builder.Services.AddScoped<INotificacionesService, NotificacionesService>();
+builder.Services.AddScoped<IEvidenciaInstalacionService, EvidenciaInstalacionService>();
 builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();

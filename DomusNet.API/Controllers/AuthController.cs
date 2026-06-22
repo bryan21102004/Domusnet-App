@@ -8,10 +8,10 @@ namespace DomusNet.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly AuthService _authService;
+    private readonly Services.Interfaces.IAuthService _authService;
     private readonly IConfiguration _config;
 
-    public AuthController(AuthService authService, IConfiguration config)
+    public AuthController(Services.Interfaces.IAuthService authService, IConfiguration config)
     {
         _authService = authService;
         _config = config;

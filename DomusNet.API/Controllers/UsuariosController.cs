@@ -10,9 +10,9 @@ namespace DomusNet.API.Controllers;
 [Authorize(Roles = "Administrador")]
 public class UsuariosController : ControllerBase
 {
-    private readonly UsuariosService _service;
+    private readonly Services.Interfaces.IUsuariosService _service;
 
-    public UsuariosController(UsuariosService service)
+    public UsuariosController(Services.Interfaces.IUsuariosService service)
     {
         _service = service;
     }

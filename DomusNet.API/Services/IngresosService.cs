@@ -5,7 +5,7 @@ using DomusNet.API.Models;
 
 namespace DomusNet.API.Services;
 
-public class IngresosService
+public class IngresosService : Interfaces.IIngresosService
 {
     private readonly DomusNetDBContext _context;
 

@@ -10,9 +10,9 @@ namespace DomusNet.API.Controllers;
 [Authorize(Roles = "Administrador")]
 public class IngresosController : ControllerBase
 {
-    private readonly IngresosService _ingresosService;
+    private readonly Services.Interfaces.IIngresosService _ingresosService;
 
-    public IngresosController(IngresosService ingresosService)
+    public IngresosController(Services.Interfaces.IIngresosService ingresosService)
     {
         _ingresosService = ingresosService;
     }

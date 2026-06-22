@@ -1,5 +1,5 @@
 using DomusNet.API.DTOs;
-using DomusNet.API.Services;
+using DomusNet.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,9 +9,9 @@ namespace DomusNet.API.Controllers;
 [Route("api/[controller]")]
 public class PaquetesController : ControllerBase
 {
-    private readonly PaquetesService _service;
+    private readonly IPaquetesService _service;
 
-    public PaquetesController(PaquetesService service)
+    public PaquetesController(IPaquetesService service)
     {
         _service = service;
     }
@@ -29,8 +29,12 @@ public class PaquetesController : ControllerBase
     public async Task<IActionResult> Buscar(int id)
     {
         var data = await _service.BuscarAsync(id);
+
         if (data == null)
+        {
             return NotFound(new { mensaje = "Paquete no encontrado" });
+        }
+
         return Ok(data);
     }
 
@@ -39,6 +43,7 @@ public class PaquetesController : ControllerBase
     public async Task<IActionResult> Crear([FromBody] PaqueteCreateDto dto)
     {
         var result = await _service.CrearAsync(dto);
+
         return result.Resultado == 1
             ? Ok(new { mensaje = "Paquete creado correctamente", id = result.IdGenerado })
             : StatusCode(500, new { mensaje = "Error al crear paquete" });
@@ -49,6 +54,7 @@ public class PaquetesController : ControllerBase
     public async Task<IActionResult> Editar(int id, [FromBody] PaqueteUpdateDto dto)
     {
         var result = await _service.EditarAsync(id, dto);
+
         return result switch
         {
             1 => Ok(new { mensaje = "Paquete actualizado correctamente" }),

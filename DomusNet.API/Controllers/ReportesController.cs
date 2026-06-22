@@ -1,16 +1,18 @@
 using DomusNet.API.Models;
-using DomusNet.API.Services;
+using DomusNet.API.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DomusNet.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Administrador")]
 public class ReportesController : ControllerBase
 {
-    private readonly ReportesService _reportesService;
+    private readonly IReportesService _reportesService;
 
-    public ReportesController(ReportesService reportesService)
+    public ReportesController(IReportesService reportesService)
     {
         _reportesService = reportesService;
     }
@@ -43,7 +45,7 @@ public class ReportesController : ControllerBase
         return BadRequest(resultado);
     }
 
-      [HttpGet("ingresos-generados/{idIngresoMensual}")]
+    [HttpGet("ingresos-generados/{idIngresoMensual}")]
     public async Task<IActionResult> ObtenerDetalleReporteIngreso(int idIngresoMensual)
     {
         var reporte = await _reportesService.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
