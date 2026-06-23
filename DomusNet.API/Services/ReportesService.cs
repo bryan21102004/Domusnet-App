@@ -1,46 +1,22 @@
-using System.Data;
-using System.Text.Json;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.Models;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
 
-public class ReportesService : Interfaces.IReportesService
+public class ReportesService : IReportesService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly IReportesRepository _repository;
 
-    public ReportesService(DomusNetDBContext context)
+    public ReportesService(IReportesRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<ResultadoOperacion> GuardarConfiguracionDistribucionAsync(
         GuardarConfiguracionDistribucionRequest request)
     {
-        using var connection = _context.CreateConnection();
-
-        var trabajadoresJson = JsonSerializer.Serialize(
-            request.Trabajadores,
-            new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }
-        );
-
-        var resultado = await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "guardarConfiguracionDistribucion",
-            new
-            {
-                request.Nombre,
-                request.PorcentajeDomusNet,
-                request.PorcentajeIVA,
-                request.PorcentajeCruzRoja,
-                request.Porcentaje911,
-                request.IdCreadoPor,
-                TrabajadoresJson = trabajadoresJson
-            },
-            commandType: CommandType.StoredProcedure);
+        var resultado = await _repository.GuardarConfiguracionDistribucionAsync(request);
 
         return resultado ?? new ResultadoOperacion
         {
@@ -52,19 +28,7 @@ public class ReportesService : Interfaces.IReportesService
     public async Task<ResultadoOperacion> GenerarReporteIngresosAsync(
         GenerarReporteIngresosRequest request)
     {
-        using var connection = _context.CreateConnection();
-
-        var resultado = await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "generarReporteIngresosMensual",
-            new
-            {
-                request.Mes,
-                request.Anio,
-                request.Quincena,
-                request.IdRegistradoPor,
-                request.Notas
-            },
-            commandType: CommandType.StoredProcedure);
+        var resultado = await _repository.GenerarReporteIngresosAsync(request);
 
         return resultado ?? new ResultadoOperacion
         {
@@ -72,27 +36,10 @@ public class ReportesService : Interfaces.IReportesService
             Mensaje = "No se obtuvo respuesta de la base de datos."
         };
     }
-    public async Task<DetalleReporteIngresoResponse?> ObtenerDetalleReporteIngresoAsync(int idIngresoMensual)
-{
-    using var connection = _context.CreateConnection();
 
-    using var multi = await connection.QueryMultipleAsync(
-        "dbo.obtenerDetalleReporteIngreso",
-        new { IdIngresoMensual = idIngresoMensual },
-        commandType: CommandType.StoredProcedure);
-
-    var resumen = await multi.ReadFirstOrDefaultAsync<ReporteIngresoResumen>();
-    var distribuciones = await multi.ReadAsync<DistribucionIngresoDetalle>();
-
-    if (resumen == null)
+    public async Task<DetalleReporteIngresoResponse?> ObtenerDetalleReporteIngresoAsync(
+        int idIngresoMensual)
     {
-        return null;
+        return await _repository.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
     }
-
-    return new DetalleReporteIngresoResponse
-    {
-        Resumen = resumen,
-        Distribuciones = distribuciones
-    };
-}
 }

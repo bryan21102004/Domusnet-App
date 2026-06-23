@@ -78,6 +78,7 @@ public class SolicitudResultDto
     public int Resultado { get; set; }
     public int IdGenerado { get; set; }
     public int IdClienteExterno { get; set; }
+     public string? Mensaje { get; set; }
 }
 
 public class AtenderSolicitudDto

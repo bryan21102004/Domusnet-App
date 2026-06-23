@@ -4,7 +4,8 @@ public class SpResultDto
 {
     public int Resultado { get; set; }
     public int IdGenerado { get; set; }
-}
+ public string? Mensaje { get; set; }
+ }
 
 public class UsuarioLoginDto
 {

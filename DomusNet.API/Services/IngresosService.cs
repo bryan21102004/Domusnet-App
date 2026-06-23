@@ -1,46 +1,26 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.Models;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
 
-public class IngresosService : Interfaces.IIngresosService
+public class IngresosService : IIngresosService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly IIngresosRepository _repository;
 
-    public IngresosService(DomusNetDBContext context)
+    public IngresosService(IIngresosRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<IEnumerable<ClienteIngresoResponse>> ListarClientesParaIngresoAsync()
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryAsync<ClienteIngresoResponse>(
-            "dbo.listarClientesParaIngreso",
-            commandType: CommandType.StoredProcedure
-        );
+        return await _repository.ListarClientesParaIngresoAsync();
     }
 
     public async Task<ResultadoIngresoResponse> RegistrarIngresoClienteAsync(RegistrarIngresoRequest request)
     {
-        using var connection = _context.CreateConnection();
-
-        var resultado = await connection.QueryFirstOrDefaultAsync<ResultadoIngresoResponse>(
-            "dbo.registrarIngresoCliente",
-            new
-            {
-                request.IdCliente,
-                request.Monto,
-                request.MetodoPago,
-                request.ReferenciaPago,
-                request.Descripcion,
-                request.IdRegistradoPor
-            },
-            commandType: CommandType.StoredProcedure
-        );
+        var resultado = await _repository.RegistrarIngresoClienteAsync(request);
 
         return resultado ?? new ResultadoIngresoResponse
         {
@@ -52,11 +32,6 @@ public class IngresosService : Interfaces.IIngresosService
 
     public async Task<IEnumerable<IngresoResponse>> ListarIngresosAsync()
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryAsync<IngresoResponse>(
-            "dbo.listarIngresos",
-            commandType: CommandType.StoredProcedure
-        );
+        return await _repository.ListarIngresosAsync();
     }
 }

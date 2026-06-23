@@ -1,85 +1,52 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.Models;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
 
-public class InstalacionService : Interfaces.IInstalacionService
+public class InstalacionService : IInstalacionService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly IInstalacionRepository _repository;
 
-    public InstalacionService(DomusNetDBContext context)
+    public InstalacionService(IInstalacionRepository repository)
     {
-       _context = context;
+        _repository = repository;
     }
 
     public async Task<IEnumerable<TecnicoActivo>> ListarTecnicosActivosAsync()
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<TecnicoActivo>(
-            "listarTecnicosActivos",
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarTecnicosActivosAsync();
     }
 
     public async Task<ResultadoOperacion> ProgramarInstalacionAsync(ProgramarInstalacionRequest request)
     {
-        using var connection = _context.CreateConnection();
-        var resultado = await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "programarInstalacion",
-            new
-            {
-                request.IdSolicitud,
-                request.IdTecnicoAsignado,
-                request.IdVendedorPrograma,
-                request.FechaProgramada,
-                request.UbicacionInstalacion,
-                request.NotasVendedor
-            },
-            commandType: CommandType.StoredProcedure);
+        var resultado = await _repository.ProgramarInstalacionAsync(request);
 
-        return resultado ?? new ResultadoOperacion { Resultado = -1, Mensaje = "No se obtuvo respuesta de la base de datos." };
+        return resultado ?? new ResultadoOperacion
+        {
+            Resultado = -1,
+            Mensaje = "No se obtuvo respuesta de la base de datos."
+        };
     }
 
-   public async Task<IEnumerable<InstalacionTecnicoResponse>> ListarPorTecnicoAsync(int idTecnico)
-{
-    using var connection = _context.CreateConnection();
+    public async Task<IEnumerable<InstalacionTecnicoResponse>> ListarPorTecnicoAsync(int idTecnico)
+    {
+        return await _repository.ListarPorTecnicoAsync(idTecnico);
+    }
 
-    return await connection.QueryAsync<InstalacionTecnicoResponse>(
-        "dbo.listarInstalacionesPorTecnico",
-        new 
-        { 
-            IdTecnico = idTecnico 
-        },
-        commandType: CommandType.StoredProcedure);
-}
     public async Task<ResultadoOperacion> CompletarInstalacionAsync(CompletarInstalacionRequest request)
     {
-        using var connection = _context.CreateConnection();
-        var resultado = await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "completarInstalacion",
-            new
-            {
-                request.IdInstalacion,
-                request.FotoEvidencia,
-                request.PruebaVelocidad,
-                request.ComentarioTecnico
-            },
-            commandType: CommandType.StoredProcedure);
+        var resultado = await _repository.CompletarInstalacionAsync(request);
 
-        return resultado ?? new ResultadoOperacion { Resultado = -1, Mensaje = "No se obtuvo respuesta de la base de datos." };
+        return resultado ?? new ResultadoOperacion
+        {
+            Resultado = -1,
+            Mensaje = "No se obtuvo respuesta de la base de datos."
+        };
     }
 
-
     public async Task<IEnumerable<InstalacionGeneralResponse>> ListarTodasAsync()
-{
-    using var connection = _context.CreateConnection();
-
-    var instalaciones = await connection.QueryAsync<InstalacionGeneralResponse>(
-        "dbo.listarInstalacionesGenerales",
-        commandType: CommandType.StoredProcedure
-    );
-
-    return instalaciones;
-}
+    {
+        return await _repository.ListarTodasAsync();
+    }
 }

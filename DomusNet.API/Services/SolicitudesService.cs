@@ -1,72 +1,42 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.DTOs;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
+
 namespace DomusNet.API.Services;
 
-public class SolicitudesService : Interfaces.ISolicitudesService
+public class SolicitudesService : ISolicitudesService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly ISolicitudesRepository _repository;
 
-    public SolicitudesService(DomusNetDBContext context)
+    public SolicitudesService(ISolicitudesRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<SolicitudResultDto> CrearAsync(SolicitudCreateDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<SolicitudResultDto>(
-            "nuevaSolicitud",
-            dto,
-            commandType: CommandType.StoredProcedure);
+        return await _repository.CrearAsync(dto);
     }
 
     public async Task<IEnumerable<dynamic>> ListarAsync(string? estado = null)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync(
-            "listarSolicitudes",
-            new { Estado = estado },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarAsync(estado);
     }
 
     public async Task<int> AtenderAsync(int idSolicitud, AtenderSolicitudDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "atenderSolicitud",
-            new
-            {
-                IdSolicitud = idSolicitud,
-                dto.IdVendedorAsignado,
-                dto.Notas
-            },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.AtenderAsync(idSolicitud, dto);
     }
- public async Task<SpResultDto> ConvertirSolicitudEnClienteAsync(
+
+    public async Task<SpResultDto> ConvertirSolicitudEnClienteAsync(
         int idSolicitud,
         int idVendedor,
         string? notas)
     {
-        var connection = _context.Database.GetDbConnection();
-
-        if (connection.State != ConnectionState.Open)
-        {
-            await connection.OpenAsync();
-        }
-
-        var resultado = await connection.QueryFirstOrDefaultAsync<SpResultDto>(
-            "dbo.convertirSolicitudEnCliente",
-            new
-            {
-                IdSolicitud = idSolicitud,
-                IdVendedor = idVendedor,
-                Notas = notas
-            },
-            commandType: CommandType.StoredProcedure
+        var resultado = await _repository.ConvertirSolicitudEnClienteAsync(
+            idSolicitud,
+            idVendedor,
+            notas
         );
 
         return resultado ?? new SpResultDto

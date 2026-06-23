@@ -1,51 +1,34 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
 
-public class NotificacionesService : Interfaces.INotificacionesService
+public class NotificacionesService : INotificacionesService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly INotificacionesRepository _repository;
 
-    public NotificacionesService(DomusNetDBContext context)
+    public NotificacionesService(INotificacionesRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<IEnumerable<dynamic>> ListarAsync(int idUsuario, bool soloNoLeidas = false)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync(
-            "listarNotificaciones",
-            new { IdUsuarioDestino = idUsuario, SoloNoLeidas = soloNoLeidas },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarAsync(idUsuario, soloNoLeidas);
     }
 
     public async Task<int> ContarNoLeidasAsync(int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "contarNotificacionesNoLeidas",
-            new { IdUsuarioDestino = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ContarNoLeidasAsync(idUsuario);
     }
 
     public async Task<int> MarcarLeidaAsync(int idNotificacion, int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "marcarNotificacionLeida",
-            new { IdNotificacion = idNotificacion, IdUsuarioDestino = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.MarcarLeidaAsync(idNotificacion, idUsuario);
     }
 
     public async Task<int> MarcarTodasLeidasAsync(int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "marcarTodasNotificacionesLeidas",
-            new { IdUsuarioDestino = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.MarcarTodasLeidasAsync(idUsuario);
     }
 }

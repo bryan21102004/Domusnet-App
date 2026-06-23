@@ -1,86 +1,53 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.DTOs;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
-public class UsuariosService : Interfaces.IUsuariosService
-{
-    private readonly DomusNetDBContext _context;
-    private readonly Interfaces.IAuthService _authService;
 
-    public UsuariosService(DomusNetDBContext context, Interfaces.IAuthService authService)
+public class UsuariosService : IUsuariosService
+{
+    private readonly IUsuariosRepository _repository;
+    private readonly IAuthService _authService;
+
+    public UsuariosService(
+        IUsuariosRepository repository,
+        IAuthService authService)
     {
-        _context = context;
+        _repository = repository;
         _authService = authService;
     }
 
     public async Task<IEnumerable<UsuarioResponseDto>> ListarAsync()
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<UsuarioResponseDto>(
-            "listarUsuarios", commandType: CommandType.StoredProcedure);
+        return await _repository.ListarAsync();
     }
 
     public async Task<UsuarioResponseDto?> BuscarAsync(int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstOrDefaultAsync<UsuarioResponseDto>(
-            "buscarUsuario",
-            new { IdUsuario = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.BuscarAsync(idUsuario);
     }
 
     public async Task<SpResultDto> CrearAsync(UsuarioCreateDto dto)
     {
-        using var connection = _context.CreateConnection();
         var hash = _authService.HashPassword(dto.Password);
-        return await connection.QueryFirstAsync<SpResultDto>(
-            "nuevoUsuario",
-            new
-            {
-                dto.Nombre,
-                dto.Correo,
-                Contrasena = hash,
-                dto.Telefono,
-                dto.IdRol
-            },
-            commandType: CommandType.StoredProcedure);
+
+        return await _repository.CrearAsync(dto, hash);
     }
 
     public async Task<int> EditarAsync(int idUsuario, UsuarioUpdateDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "editarUsuario",
-            new
-            {
-                IdUsuario = idUsuario,
-                dto.Nombre,
-                dto.Correo,
-                dto.Telefono,
-                dto.IdRol,
-                dto.Activo
-            },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.EditarAsync(idUsuario, dto);
     }
 
     public async Task<int> EliminarAsync(int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "eliminarUsuario",
-            new { IdUsuario = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.EliminarAsync(idUsuario);
     }
 
     public async Task<int> CambiarContrasenaAsync(int idUsuario, string password)
     {
-        using var connection = _context.CreateConnection();
         var hash = _authService.HashPassword(password);
-        return await connection.QueryFirstAsync<int>(
-            "cambiarContrasenaUsuario",
-            new { IdUsuario = idUsuario, Contrasena = hash },
-            commandType: CommandType.StoredProcedure);
+
+        return await _repository.CambiarContrasenaAsync(idUsuario, hash);
     }
 }

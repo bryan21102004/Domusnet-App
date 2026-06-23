@@ -1,69 +1,40 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.DTOs;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 
 namespace DomusNet.API.Services;
 
-public class ClientesService : Interfaces.IClientesService
+public class ClientesService : IClientesService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly IClientesRepository _repository;
 
-    public ClientesService(DomusNetDBContext context)
+    public ClientesService(IClientesRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     public async Task<IEnumerable<dynamic>> ListarAsync(string? estadoPago = null)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryAsync(
-            "listarClientes",
-            new { EstadoPago = estadoPago },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarAsync(estadoPago);
     }
 
     public async Task<dynamic?> BuscarAsync(int idCliente)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstOrDefaultAsync(
-            "buscarCliente",
-            new { IdCliente = idCliente },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.BuscarAsync(idCliente);
     }
 
     public async Task<SpResultDto> CrearAsync(ClienteCreateDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<SpResultDto>(
-            "nuevoCliente",
-            dto,
-            commandType: CommandType.StoredProcedure);
+        return await _repository.CrearAsync(dto);
     }
 
     public async Task<int> EditarAsync(int idCliente, ClienteUpdateDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<int>(
-            "editarCliente",
-            new
-            {
-                IdCliente = idCliente,
-                dto.NombreCompleto,
-                dto.Telefono,
-                dto.Correo,
-                dto.Direccion,
-                dto.EstadoPago
-            },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.EditarAsync(idCliente, dto);
     }
 
     public async Task<SpResultDto> AsignarPaqueteAsync(AsignarPaqueteDto dto)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstAsync<SpResultDto>(
-            "asignarPaqueteCliente",
-            dto,
-            commandType: CommandType.StoredProcedure);
+        return await _repository.AsignarPaqueteAsync(dto);
     }
 }

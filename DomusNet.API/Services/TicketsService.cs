@@ -1,87 +1,60 @@
-using System.Data;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.DTOs;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace DomusNet.API.Services;
-public class TicketsService : Interfaces.ITicketsService
+
+public class TicketsService : ITicketsService
 {
-    private readonly DomusNetDBContext _context;
-    private readonly Interfaces.IEmailService _emailService;
+    private readonly ITicketsRepository _repository;
+    private readonly IEmailService _emailService;
     private readonly ILogger<TicketsService> _logger;
     private readonly int _idUsuarioSistema;
 
     public TicketsService(
-        DomusNetDBContext context,
-        Interfaces.IEmailService emailService,
+        ITicketsRepository repository,
+        IEmailService emailService,
         ILogger<TicketsService> logger,
         IConfiguration configuration)
     {
-        _context = context;
+        _repository = repository;
         _emailService = emailService;
         _logger = logger;
-
-        // Si no existe la configuración, usa 1 por defecto.
         _idUsuarioSistema = configuration.GetValue<int?>("Tickets:IdUsuarioSistema") ?? 1;
     }
 
     public async Task<IEnumerable<dynamic>> ListarAsync(string? estado = null, int? idAsignadoA = null)
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryAsync(
-            "listarTickets",
-            new { Estado = estado, IdAsignadoA = idAsignadoA },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarAsync(estado, idAsignadoA);
     }
 
     public async Task<dynamic?> BuscarAsync(int idTicket)
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryFirstOrDefaultAsync(
-            "buscarTicket",
-            new { IdTicket = idTicket },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.BuscarAsync(idTicket);
     }
 
     public async Task<IEnumerable<dynamic>> ListarHistorialAsync(int idTicket)
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryAsync(
-            "listarHistorialTicket",
-            new { IdTicket = idTicket },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarHistorialAsync(idTicket);
     }
 
     public async Task<IEnumerable<dynamic>> ListarGlobalesAsync()
     {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryAsync(
-            "listarTicketsGlobales",
-            commandType: CommandType.StoredProcedure);
+        return await _repository.ListarGlobalesAsync();
     }
 
     public async Task<SpResultDto> CrearAsync(TicketCreateDto dto)
     {
-        using var connection = _context.CreateConnection();
+        var result = await _repository.CrearAsync(dto);
 
-        var result = await connection.QueryFirstAsync<SpResultDto>(
-            "nuevoTicket",
-            dto,
-            commandType: CommandType.StoredProcedure);
-
-        var tipo = dto.Tipo?.Trim() ?? "";
+        var tipo = dto.Tipo?.Trim() ?? string.Empty;
 
         var esTipoAveria =
             tipo.Equals("Averia", StringComparison.OrdinalIgnoreCase) ||
             tipo.Equals("Avería", StringComparison.OrdinalIgnoreCase);
 
-        // Si es una avería global, notificar a los clientes activos por correo
         if (result.Resultado == 1 && dto.EsGlobal && esTipoAveria)
         {
             var titulo = string.IsNullOrWhiteSpace(dto.Titulo)
@@ -98,26 +71,78 @@ public class TicketsService : Interfaces.ITicketsService
         return result;
     }
 
+    public async Task<SpResultDto> ReportarClienteAsync(ReportarAveriaClienteDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.NombreCompleto) ||
+            string.IsNullOrWhiteSpace(dto.Telefono) ||
+            string.IsNullOrWhiteSpace(dto.Direccion) ||
+            string.IsNullOrWhiteSpace(dto.DescripcionProblema))
+        {
+            return new SpResultDto
+            {
+                Resultado = 0,
+                IdGenerado = 0
+            };
+        }
+
+        var telefono = dto.Telefono.Trim();
+
+        var cliente = await _repository.BuscarClienteActivoPorTelefonoAsync(telefono);
+
+        int? idCliente = null;
+        var nombreCliente = dto.NombreCompleto.Trim();
+        var direccionCliente = dto.Direccion.Trim();
+
+        if (cliente != null)
+        {
+            idCliente = cliente.IdCliente;
+
+            if (!string.IsNullOrWhiteSpace(cliente.NombreCompleto))
+            {
+                nombreCliente = cliente.NombreCompleto;
+            }
+
+            if (!string.IsNullOrWhiteSpace(cliente.Direccion))
+            {
+                direccionCliente = cliente.Direccion;
+            }
+        }
+
+        var titulo = $"Avería de Cliente - {nombreCliente}";
+
+        var descripcionFormateada =
+            $"Cliente: {nombreCliente}\n" +
+            $"Teléfono: {telefono}\n" +
+            $"Dirección: {direccionCliente}\n" +
+            $"Detalle del problema: {dto.DescripcionProblema.Trim()}";
+
+        return await _repository.CrearReporteClienteAsync(
+            titulo,
+            descripcionFormateada,
+            idCliente,
+            _idUsuarioSistema
+        );
+    }
+
+    public async Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto)
+    {
+        return await _repository.ActualizarEstadoAsync(idTicket, dto);
+    }
+
     private async Task EnviarNotificacionesAveriaGlobalAsync(string titulo, string descripcion)
     {
         try
         {
-            using var bgConnection = _context.CreateConnection();
-
-            var clientesActivos = await bgConnection.QueryAsync<ClienteCorreoDto>(
-                @"SELECT NombreCompleto, Correo
-                  FROM Clientes
-                  WHERE Activo = 1
-                  AND Correo IS NOT NULL
-                  AND LTRIM(RTRIM(Correo)) <> ''"
-            );
+            var clientesActivos = await _repository.ListarClientesActivosConCorreoAsync();
 
             foreach (var cliente in clientesActivos)
             {
                 try
                 {
                     if (string.IsNullOrWhiteSpace(cliente.Correo))
+                    {
                         continue;
+                    }
 
                     var subject = $"[DomusNet] Aviso de Avería General: {titulo}";
 
@@ -132,103 +157,25 @@ public class TicketsService : Interfaces.ITicketsService
                         $"Soporte Técnico DomusNet";
 
                     await _emailService.SendEmailAsync(cliente.Correo, subject, body);
+
                     await Task.Delay(500);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "No se pudo enviar correo al cliente {Correo}.", cliente.Correo);
+                    _logger.LogWarning(
+                        ex,
+                        "No se pudo enviar correo al cliente {Correo}.",
+                        cliente.Correo
+                    );
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error al enviar notificaciones masivas de avería global.");
+            _logger.LogError(
+                ex,
+                "Error al enviar notificaciones masivas de avería global."
+            );
         }
     }
-
-    public async Task<SpResultDto> ReportarClienteAsync(ReportarAveriaClienteDto dto)
-    {
-        if (string.IsNullOrWhiteSpace(dto.NombreCompleto) ||
-            string.IsNullOrWhiteSpace(dto.Telefono) ||
-            string.IsNullOrWhiteSpace(dto.Direccion) ||
-            string.IsNullOrWhiteSpace(dto.DescripcionProblema))
-        {
-            return new SpResultDto
-            {
-                Resultado = 0,
-               
-            };
-        }
-
-        using var connection = _context.CreateConnection();
-
-        var telefono = dto.Telefono.Trim();
-
-        // Buscar si hay un cliente activo con el teléfono dado
-        var cliente = await connection.QueryFirstOrDefaultAsync<ClienteReporteDto>(
-            @"SELECT IdCliente, NombreCompleto, Direccion
-              FROM Clientes
-              WHERE Telefono = @Telefono
-              AND Activo = 1",
-            new { Telefono = telefono }
-        );
-
-        int? idCliente = null;
-        string nombreCliente = dto.NombreCompleto.Trim();
-        string direccionCliente = dto.Direccion.Trim();
-
-        if (cliente != null)
-        {
-            idCliente = cliente.IdCliente;
-
-            if (!string.IsNullOrWhiteSpace(cliente.NombreCompleto))
-                nombreCliente = cliente.NombreCompleto;
-
-            if (!string.IsNullOrWhiteSpace(cliente.Direccion))
-                direccionCliente = cliente.Direccion;
-        }
-
-        var titulo = $"Avería de Cliente - {nombreCliente}";
-
-        var descripcionFormateada =
-            $"Cliente: {nombreCliente}\n" +
-            $"Teléfono: {telefono}\n" +
-            $"Dirección: {direccionCliente}\n" +
-            $"Detalle del problema: {dto.DescripcionProblema.Trim()}";
-
-        var result = await connection.QueryFirstAsync<SpResultDto>(
-            "nuevoTicket",
-            new
-            {
-                Titulo = titulo,
-                Descripcion = descripcionFormateada,
-                Tipo = "Averia",
-                Prioridad = "Alta",
-                IdCliente = idCliente,
-                IdCreadoPor = _idUsuarioSistema,
-                IdAsignadoA = (int?)null,
-                EsGlobal = false
-            },
-            commandType: CommandType.StoredProcedure);
-
-        return result;
-    }
-
-    public async Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto)
-    {
-        using var connection = _context.CreateConnection();
-
-        return await connection.QueryFirstAsync<int>(
-            "actualizarEstadoTicket",
-            new
-            {
-                IdTicket = idTicket,
-                dto.EstadoNuevo,
-                dto.IdUsuario,
-                dto.Comentario
-            },
-            commandType: CommandType.StoredProcedure);
-    }
-
-   
 }

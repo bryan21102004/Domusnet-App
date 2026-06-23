@@ -1,44 +1,46 @@
-using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Dapper;
-using DomusNet.API.Data;
 using DomusNet.API.Data.Models;
 using DomusNet.API.DTOs;
+using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DomusNet.API.Services;
 
-public class AuthService : Interfaces.IAuthService
+public class AuthService : IAuthService
 {
-    private readonly DomusNetDBContext _context;
+    private readonly IAuthRepository _repository;
     private readonly IConfiguration _config;
     private readonly PasswordHasher<Usuario> _passwordHasher;
 
-    public AuthService(DomusNetDBContext context, IConfiguration config)
+    public AuthService(IAuthRepository repository, IConfiguration config)
     {
-        _context = context;
+        _repository = repository;
         _config = config;
         _passwordHasher = new PasswordHasher<Usuario>();
     }
 
     public async Task<UsuarioLoginDto?> ValidateUserAsync(string correo, string password)
     {
-        using var connection = _context.CreateConnection();
-        var usuario = await connection.QueryFirstOrDefaultAsync<UsuarioLoginDto>(
-            "buscarUsuarioLogin",
-            new { Correo = correo },
-            commandType: CommandType.StoredProcedure);
+        var usuario = await _repository.BuscarUsuarioLoginAsync(correo);
 
-        if (usuario == null) return null;
+        if (usuario == null)
+        {
+            return null;
+        }
 
         var resultado = _passwordHasher.VerifyHashedPassword(
-            new Usuario(), usuario.Contrasena, password);
+            new Usuario(),
+            usuario.Contrasena,
+            password);
 
         if (resultado != PasswordVerificationResult.Success)
+        {
             return null;
+        }
 
         return usuario;
     }
@@ -53,8 +55,14 @@ public class AuthService : Interfaces.IAuthService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
+        );
+
+        var creds = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256
+        );
 
         var token = new JwtSecurityToken(
             issuer: _config["Jwt:Issuer"],
@@ -69,36 +77,37 @@ public class AuthService : Interfaces.IAuthService
     public async Task<string> GenerateRefreshTokenAsync(int idUsuario)
     {
         var refreshToken = Guid.NewGuid().ToString("N");
+
         await ActualizarTokenAsync(idUsuario, refreshToken);
+
         return refreshToken;
     }
 
     public async Task ActualizarTokenAsync(int idUsuario, string refreshToken)
     {
-        using var connection = _context.CreateConnection();
-        await connection.ExecuteAsync(
-            "modificarToken",
-            new { IdUsuario = idUsuario, RefreshToken = refreshToken },
-            commandType: CommandType.StoredProcedure);
+        await _repository.ActualizarTokenAsync(idUsuario, refreshToken);
     }
 
     public async Task<int?> VerificarRefreshTokenAsync(int idUsuario, string refreshToken)
     {
-        using var connection = _context.CreateConnection();
-        return await connection.QueryFirstOrDefaultAsync<int?>(
-            "verificarTokenR",
-            new { IdUsuario = idUsuario, RefreshToken = refreshToken },
-            commandType: CommandType.StoredProcedure);
+        return await _repository.VerificarRefreshTokenAsync(idUsuario, refreshToken);
     }
 
     public async Task<(string newToken, string newRefresh)?> RefreshTokenAsync(
-        int idUsuario, string refreshToken, UsuarioLoginDto usuario)
+        int idUsuario,
+        string refreshToken,
+        UsuarioLoginDto usuario)
     {
         var rol = await VerificarRefreshTokenAsync(idUsuario, refreshToken);
-        if (rol == null) return null;
+
+        if (rol == null)
+        {
+            return null;
+        }
 
         var newJwt = GenerateJwtToken(usuario);
         var newRefresh = Guid.NewGuid().ToString("N");
+
         await ActualizarTokenAsync(idUsuario, newRefresh);
 
         return (newJwt, newRefresh);
@@ -111,13 +120,12 @@ public class AuthService : Interfaces.IAuthService
 
     public async Task<UsuarioLoginDto?> GetUsuarioAsync(int idUsuario)
     {
-        using var connection = _context.CreateConnection();
-        var usuario = await connection.QueryFirstOrDefaultAsync<UsuarioResponseDto>(
-            "buscarUsuario",
-            new { IdUsuario = idUsuario },
-            commandType: CommandType.StoredProcedure);
+        var usuario = await _repository.BuscarUsuarioAsync(idUsuario);
 
-        if (usuario == null) return null;
+        if (usuario == null)
+        {
+            return null;
+        }
 
         return new UsuarioLoginDto
         {
