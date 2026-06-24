@@ -47,7 +47,7 @@ public class AuthFrontendService
 
     public async Task LogoutAsync()
     {
-        var usuarioIdTexto = await _js.InvokeAsync<string>("localStorage.getItem", "usuarioId");
+        var usuarioIdTexto = await _js.InvokeAsync<string?>("localStorage.getItem", "usuarioId");
 
         if (int.TryParse(usuarioIdTexto, out var usuarioId))
         {
@@ -63,17 +63,31 @@ public class AuthFrontendService
 
     public async Task<bool> EstaLogueadoAsync()
     {
-        var token = await _js.InvokeAsync<string>("localStorage.getItem", "token");
+        var token = await ObtenerTokenAsync();
         return !string.IsNullOrWhiteSpace(token);
+    }
+
+    public async Task<string?> ObtenerTokenAsync()
+    {
+        return await _js.InvokeAsync<string?>("localStorage.getItem", "token");
     }
 
     public async Task<string?> ObtenerRolAsync()
     {
-        return await _js.InvokeAsync<string>("localStorage.getItem", "rol");
+        return await _js.InvokeAsync<string?>("localStorage.getItem", "rol");
     }
 
     public async Task<string?> ObtenerNombreAsync()
     {
-        return await _js.InvokeAsync<string>("localStorage.getItem", "nombre");
+        return await _js.InvokeAsync<string?>("localStorage.getItem", "nombre");
+    }
+
+    public async Task<int> ObtenerUsuarioIdAsync()
+    {
+        var valor = await _js.InvokeAsync<string?>("localStorage.getItem", "usuarioId");
+
+        return int.TryParse(valor, out var idUsuario)
+            ? idUsuario
+            : 0;
     }
 }

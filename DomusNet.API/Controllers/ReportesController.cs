@@ -11,11 +11,16 @@ namespace DomusNet.API.Controllers;
 public class ReportesController : ControllerBase
 {
     private readonly IReportesService _reportesService;
+    private readonly IReportePdfService _reportePdfService;
 
-    public ReportesController(IReportesService reportesService)
-    {
-        _reportesService = reportesService;
-    }
+    
+    public ReportesController(
+    IReportesService reportesService,
+    IReportePdfService reportePdfService)
+{
+    _reportesService = reportesService;
+    _reportePdfService = reportePdfService;
+}
 
     [HttpPost("configuracion-distribucion")]
     public async Task<IActionResult> GuardarConfiguracionDistribucion(
@@ -60,4 +65,24 @@ public class ReportesController : ControllerBase
 
         return Ok(reporte);
     }
+
+    [HttpGet("ingresos-generados/{idIngresoMensual}/pdf")]
+public async Task<IActionResult> DescargarReporteIngresoPdf(int idIngresoMensual)
+{
+    var resultado = await _reportePdfService.GenerarReporteIngresosPdfAsync(idIngresoMensual);
+
+    if (resultado == null)
+    {
+        return NotFound(new
+        {
+            mensaje = "No se encontró el reporte de ingresos."
+        });
+    }
+
+    return File(
+        resultado.Archivo,
+        "application/pdf",
+        resultado.NombreArchivo
+    );
+}
 }

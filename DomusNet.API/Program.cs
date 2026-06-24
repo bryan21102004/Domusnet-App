@@ -5,11 +5,13 @@ using DomusNet.API.Services.Interfaces;
 using DomusNet.API.Repositories.Interfaces;
 using DomusNet.API.Repositories;
 using DomusNet.API.Services.ReglasNegocio;
+using QuestPDF.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Services.AddCors(options =>
 {
@@ -45,6 +47,7 @@ builder.Services.AddScoped<IIngresosService, IngresosService>();
 builder.Services.AddScoped<IIngresosRepository, IngresosRepository>();
 builder.Services.AddScoped<IReportesService, ReportesService>();
 builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
+builder.Services.AddScoped<IReportePdfService, ReportePdfService>();
 builder.Services.AddScoped<INotificacionesService, NotificacionesService>();
 builder.Services.AddScoped<INotificacionesRepository, NotificacionesRepository>();
 builder.Services.AddScoped<IEvidenciaInstalacionService, EvidenciaInstalacionService>();

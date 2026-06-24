@@ -30,7 +30,7 @@ public class ReportesRepository : IReportesRepository
         );
 
         return await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "guardarConfiguracionDistribucion",
+            "dbo.guardarConfiguracionDistribucion",
             new
             {
                 request.Nombre,
@@ -50,7 +50,7 @@ public class ReportesRepository : IReportesRepository
         using var connection = _context.CreateConnection();
 
         return await connection.QueryFirstOrDefaultAsync<ResultadoOperacion>(
-            "generarReporteIngresosMensual",
+            "dbo.generarReporteIngresosMensual",
             new
             {
                 request.Mes,
@@ -61,32 +61,36 @@ public class ReportesRepository : IReportesRepository
             },
             commandType: CommandType.StoredProcedure);
     }
+public async Task<DetalleReporteIngresoResponse?> ObtenerDetalleReporteIngresoAsync(
+    int idIngresoMensual)
+{
+    using var connection = _context.CreateConnection();
 
-    public async Task<DetalleReporteIngresoResponse?> ObtenerDetalleReporteIngresoAsync(
-        int idIngresoMensual)
+    using var multi = await connection.QueryMultipleAsync(
+        "dbo.obtenerDetalleReporteIngreso",
+        new
+        {
+            IdIngresoMensual = idIngresoMensual
+        },
+        commandType: CommandType.StoredProcedure);
+
+    var resumen = await multi.ReadFirstOrDefaultAsync<ReporteIngresoResumen>();
+
+    if (resumen == null)
     {
-        using var connection = _context.CreateConnection();
-
-        using var multi = await connection.QueryMultipleAsync(
-            "dbo.obtenerDetalleReporteIngreso",
-            new
-            {
-                IdIngresoMensual = idIngresoMensual
-            },
-            commandType: CommandType.StoredProcedure);
-
-        var resumen = await multi.ReadFirstOrDefaultAsync<ReporteIngresoResumen>();
-        var distribuciones = await multi.ReadAsync<DistribucionIngresoDetalle>();
-
-        if (resumen == null)
-        {
-            return null;
-        }
-
-        return new DetalleReporteIngresoResponse
-        {
-            Resumen = resumen,
-            Distribuciones = distribuciones
-        };
+        return null;
     }
+
+    var distribuciones = await multi.ReadAsync<DistribucionIngresoDetalle>();
+
+    var totalesPorTipo = await multi.ReadAsync<DistribucionPorTipoResumen>();
+
+    return new DetalleReporteIngresoResponse
+    {
+        Resumen = resumen,
+        Distribuciones = distribuciones,
+        TotalesPorTipo = totalesPorTipo
+    };
+}
+  
 }

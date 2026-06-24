@@ -1,0 +1,795 @@
+@page "/admin/reportes"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@using Microsoft.JSInterop
+@inject ReportesService ReportesService
+@inject AuthFrontendService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Reportes financieros</PageTitle>
+
+<div class="min-h-screen bg-domus-dark text-domus-text px-4 py-6">
+
+    <div class="max-w-6xl mx-auto space-y-5">
+
+        <!-- Encabezado -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold">
+                    Reportes financieros
+                </h1>
+                <p class="text-sm text-domus-text-secondary mt-1">
+                    Generación, consulta y descarga de reportes de ingresos.
+                </p>
+            </div>
+
+            @if (detalle?.Resumen != null)
+            {
+                <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
+                        disabled="@cargandoPdf"
+                        @onclick="DescargarPdf">
+                    @(cargandoPdf ? "Generando PDF..." : "Descargar PDF")
+                </button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(mensaje))
+        {
+            <div class="@ClaseMensaje">
+                @mensaje
+            </div>
+        }
+
+        <!-- Panel de acciones -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+            <!-- Generar reporte -->
+            <div class="lg:col-span-2 rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
+                <h2 class="text-lg font-bold mb-4">
+                    Generar reporte
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            Mes
+                        </label>
+                        <input type="number"
+                               min="1"
+                               max="12"
+                               class="input-admin"
+                               @bind="generar.Mes" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            Año
+                        </label>
+                        <input type="number"
+                               class="input-admin"
+                               @bind="generar.Anio" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            Quincena
+                        </label>
+                        <select class="input-admin"
+                                @bind="generar.Quincena">
+                            <option value="">Mes completo</option>
+                            <option value="Primera">Primera</option>
+                            <option value="Segunda">Segunda</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end">
+                        <button class="w-full px-4 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 disabled:opacity-60"
+                                disabled="@generandoReporte"
+                                @onclick="GenerarReporte">
+                            @(generandoReporte ? "Generando..." : "Generar")
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-xs text-domus-text-secondary mb-1">
+                        Notas
+                    </label>
+                    <textarea rows="2"
+                              class="input-admin resize-none"
+                              @bind="generar.Notas"
+                              placeholder="Notas del reporte"></textarea>
+                </div>
+            </div>
+
+            <!-- Consultar reporte -->
+            <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
+                <h2 class="text-lg font-bold mb-4">
+                    Consultar reporte
+                </h2>
+
+                <label class="block text-xs text-domus-text-secondary mb-1">
+                    Id del reporte
+                </label>
+
+                <div class="flex gap-2">
+                    <input type="number"
+                           class="input-admin"
+                           @bind="idReporteConsulta" />
+
+                    <button class="px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-domus-text font-semibold hover:bg-slate-700 disabled:opacity-60"
+                            disabled="@consultandoReporte"
+                            @onclick="ConsultarReporte">
+                        @(consultandoReporte ? "..." : "Ver")
+                    </button>
+                </div>
+
+                @if (detalle?.Resumen != null)
+                {
+                    <div class="mt-4 text-sm text-domus-text-secondary">
+                        Reporte cargado:
+                        <span class="font-semibold text-domus-text">
+                            #@detalle.Resumen.IdIngresoMensual
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Configuración compacta -->
+        <details class="rounded-xl bg-slate-900/70 border border-slate-700/60">
+            <summary class="cursor-pointer px-5 py-4 font-semibold">
+                Configuración de distribución
+                <span class="text-sm text-domus-text-secondary font-normal ml-2">
+                    DomusNet @configuracion.PorcentajeDomusNet.ToString("N2")% · Trabajadores @TotalTrabajadores().ToString("N2")%
+                </span>
+            </summary>
+
+            <div class="px-5 pb-5 border-t border-slate-700/60">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            Nombre
+                        </label>
+                        <input class="input-admin"
+                               @bind="configuracion.Nombre" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            % DomusNet
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               class="input-admin"
+                               @bind="configuracion.PorcentajeDomusNet" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            % IVA
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               class="input-admin"
+                               @bind="configuracion.PorcentajeIVA" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            % Cruz Roja
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               class="input-admin"
+                               @bind="configuracion.PorcentajeCruzRoja" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-domus-text-secondary mb-1">
+                            % 911
+                        </label>
+                        <input type="number"
+                               step="0.01"
+                               class="input-admin"
+                               @bind="configuracion.Porcentaje911" />
+                    </div>
+                </div>
+
+                <div class="mt-5 overflow-x-auto rounded-lg border border-slate-700/60">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/80 text-domus-text-secondary">
+                            <tr>
+                                <th class="text-left px-4 py-3">Id Usuario</th>
+                                <th class="text-left px-4 py-3">Tipo</th>
+                                <th class="text-right px-4 py-3">Porcentaje</th>
+                                <th class="text-right px-4 py-3">Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var trabajador in configuracion.Trabajadores)
+                            {
+                                <tr class="border-t border-slate-700/60">
+                                    <td class="px-4 py-3">
+                                        <input type="number"
+                                               class="input-table"
+                                               @bind="trabajador.IdUsuario" />
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        <select class="input-table"
+                                                @bind="trabajador.TipoDistribucion">
+                                            <option value="Administrador">Administrador</option>
+                                            <option value="Vendedor">Vendedor</option>
+                                            <option value="Tecnico">Técnico</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        <input type="number"
+                                               step="0.01"
+                                               class="input-table text-right"
+                                               @bind="trabajador.Porcentaje" />
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        <button class="text-red-300 hover:text-red-200 text-sm"
+                                                @onclick="() => QuitarTrabajador(trabajador)">
+                                            Quitar
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+
+                        <tfoot class="bg-slate-800/50 border-t border-slate-700/60">
+                            <tr>
+                                <td class="px-4 py-3 font-semibold" colspan="2">
+                                    Total trabajadores
+                                </td>
+                                <td class="px-4 py-3 text-right font-bold">
+                                    @TotalTrabajadores().ToString("N2")%
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 font-semibold" colspan="2">
+                                    Total general
+                                </td>
+                                <td class="px-4 py-3 text-right font-bold @(DistribucionValida() ? "text-emerald-300" : "text-red-300")">
+                                    @TotalGeneral().ToString("N2")%
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4">
+                    <button class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 text-domus-text hover:bg-slate-700"
+                            @onclick="AgregarTrabajador">
+                        Agregar trabajador
+                    </button>
+
+                    <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
+                            disabled="@guardandoConfiguracion"
+                            @onclick="GuardarConfiguracion">
+                        @(guardandoConfiguracion ? "Guardando..." : "Guardar configuración")
+                    </button>
+                </div>
+            </div>
+        </details>
+
+        <!-- Reporte cargado -->
+        @if (detalle?.Resumen != null)
+        {
+            <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
+
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+                    <div>
+                        <h2 class="text-xl font-bold">
+                            Reporte #@detalle.Resumen.IdIngresoMensual
+                        </h2>
+                        <p class="text-sm text-domus-text-secondary mt-1">
+                            @NombreMes(detalle.Resumen.Mes) @detalle.Resumen.Anio ·
+                            @(string.IsNullOrWhiteSpace(detalle.Resumen.Quincena) ? "Mes completo" : detalle.Resumen.Quincena) ·
+                            Registrado por @Texto(detalle.Resumen.RegistradoPor, "Sin usuario")
+                        </p>
+                    </div>
+
+                    <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
+                            disabled="@cargandoPdf"
+                            @onclick="DescargarPdf">
+                        @(cargandoPdf ? "Generando PDF..." : "Descargar PDF")
+                    </button>
+                </div>
+
+                <!-- Resumen en tabla -->
+                <div class="overflow-x-auto rounded-lg border border-slate-700/60 mb-5">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-800/80 text-domus-text-secondary">
+                            <tr>
+                                <th class="text-left px-4 py-3">Concepto</th>
+                                <th class="text-right px-4 py-3">Porcentaje</th>
+                                <th class="text-right px-4 py-3">Monto</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr class="border-t border-slate-700/60">
+                                <td class="px-4 py-3">Total bruto</td>
+                                <td class="px-4 py-3 text-right">-</td>
+                                <td class="px-4 py-3 text-right font-semibold">@Colon(detalle.Resumen.MontoTotalBruto)</td>
+                            </tr>
+
+                            <tr class="border-t border-slate-700/60">
+                                <td class="px-4 py-3">Total con rebajas</td>
+                                <td class="px-4 py-3 text-right">
+                                    @(TotalRebajosReporte().ToString("N2"))%
+                                </td>
+                                <td class="px-4 py-3 text-right font-semibold">@Colon(detalle.Resumen.MontoTotalConRebajas)</td>
+                            </tr>
+
+                            <tr class="border-t border-slate-700/60">
+                                <td class="px-4 py-3">DomusNet</td>
+                                <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeDomusNet.ToString("N2")%</td>
+                                <td class="px-4 py-3 text-right font-semibold text-cyan-300">@Colon(detalle.Resumen.MontoDomusNet)</td>
+                            </tr>
+
+                            <tr class="border-t border-slate-700/60">
+                                <td class="px-4 py-3">Trabajadores</td>
+                                <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeTrabajadores.ToString("N2")%</td>
+                                <td class="px-4 py-3 text-right font-semibold text-emerald-300">@Colon(detalle.Resumen.MontoTrabajadores)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                    <!-- Totales por tipo -->
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            Totales por tipo
+                        </h3>
+
+                        <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-800/80 text-domus-text-secondary">
+                                    <tr>
+                                        <th class="text-left px-4 py-3">Tipo</th>
+                                        <th class="text-right px-4 py-3">Total asignado</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @if (!detalle.TotalesPorTipo.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="2" class="px-4 py-4 text-center text-domus-text-secondary">
+                                                No hay datos.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var tipo in detalle.TotalesPorTipo)
+                                        {
+                                            <tr class="border-t border-slate-700/60">
+                                                <td class="px-4 py-3">@Texto(tipo.TipoDistribucion, "Otro")</td>
+                                                <td class="px-4 py-3 text-right font-semibold">@Colon(tipo.TotalAsignado)</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Rebajos -->
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            Rebajos aplicados
+                        </h3>
+
+                        <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-800/80 text-domus-text-secondary">
+                                    <tr>
+                                        <th class="text-left px-4 py-3">Rebajo</th>
+                                        <th class="text-right px-4 py-3">Porcentaje</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr class="border-t border-slate-700/60">
+                                        <td class="px-4 py-3">IVA</td>
+                                        <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeIVA.ToString("N2")%</td>
+                                    </tr>
+
+                                    <tr class="border-t border-slate-700/60">
+                                        <td class="px-4 py-3">Cruz Roja</td>
+                                        <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeCruzRoja.ToString("N2")%</td>
+                                    </tr>
+
+                                    <tr class="border-t border-slate-700/60">
+                                        <td class="px-4 py-3">911</td>
+                                        <td class="px-4 py-3 text-right">@detalle.Resumen.Porcentaje911.ToString("N2")%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distribución trabajadores -->
+                <div class="mt-5">
+                    <h3 class="font-bold mb-3">
+                        Distribución por trabajador
+                    </h3>
+
+                    <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-800/80 text-domus-text-secondary">
+                                <tr>
+                                    <th class="text-left px-4 py-3">Trabajador</th>
+                                    <th class="text-left px-4 py-3">Tipo</th>
+                                    <th class="text-right px-4 py-3">Porcentaje</th>
+                                    <th class="text-right px-4 py-3">Monto</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach (var item in detalle.Distribuciones)
+                                {
+                                    <tr class="border-t border-slate-700/60 hover:bg-slate-800/40">
+                                        <td class="px-4 py-3">
+                                            <span class="font-semibold">@Texto(item.Trabajador, "Sin nombre")</span>
+                                            <span class="text-xs text-domus-text-secondary ml-1">#@item.IdUsuario</span>
+                                        </td>
+
+                                        <td class="px-4 py-3">@Texto(item.TipoDistribucion, "Otro")</td>
+
+                                        <td class="px-4 py-3 text-right">
+                                            @item.PorcentajeAplicado.ToString("N2")%
+                                        </td>
+
+                                        <td class="px-4 py-3 text-right font-semibold">
+                                            @Colon(item.MontoAsignado)
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(detalle.Resumen.Notas))
+                {
+                    <div class="mt-5 rounded-lg bg-slate-800/50 border border-slate-700/60 p-4">
+                        <p class="text-xs text-domus-text-secondary mb-1">
+                            Notas
+                        </p>
+                        <p class="text-sm">
+                            @detalle.Resumen.Notas
+                        </p>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string? mensaje;
+    private bool mensajeEsError;
+
+    private bool guardandoConfiguracion;
+    private bool generandoReporte;
+    private bool consultandoReporte;
+    private bool cargandoPdf;
+
+    private int idUsuarioActual = 1;
+    private int idReporteConsulta = 1;
+
+    private string ClaseMensaje =>
+        mensajeEsError
+            ? "rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-200 text-sm"
+            : "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-cyan-200 text-sm";
+
+    private GuardarConfiguracionDistribucionRequest configuracion = new()
+    {
+        Nombre = "Configuración base DomusNet",
+        PorcentajeDomusNet = 70,
+        PorcentajeIVA = 13,
+        PorcentajeCruzRoja = 1,
+        Porcentaje911 = 0.75m,
+        Trabajadores = new()
+        {
+            new TrabajadorDistribucionRequest { IdUsuario = 1, TipoDistribucion = "Administrador", Porcentaje = 5 },
+            new TrabajadorDistribucionRequest { IdUsuario = 2, TipoDistribucion = "Administrador", Porcentaje = 5 },
+            new TrabajadorDistribucionRequest { IdUsuario = 3, TipoDistribucion = "Vendedor", Porcentaje = 5 },
+            new TrabajadorDistribucionRequest { IdUsuario = 4, TipoDistribucion = "Vendedor", Porcentaje = 5 },
+            new TrabajadorDistribucionRequest { IdUsuario = 5, TipoDistribucion = "Tecnico", Porcentaje = 5 },
+            new TrabajadorDistribucionRequest { IdUsuario = 6, TipoDistribucion = "Tecnico", Porcentaje = 5 }
+        }
+    };
+
+    private GenerarReporteIngresosRequest generar = new()
+    {
+        Mes = 6,
+        Anio = 2026,
+        Quincena = null,
+        Notas = "Reporte mensual"
+    };
+
+    private DetalleReporteIngresoResponse? detalle;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rol = await AuthService.ObtenerRolAsync();
+
+        if (rol?.Trim().ToLower() != "administrador")
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        var idUsuario = await AuthService.ObtenerUsuarioIdAsync();
+
+        if (idUsuario > 0)
+        {
+            idUsuarioActual = idUsuario;
+        }
+
+        configuracion.IdCreadoPor = idUsuarioActual;
+        generar.IdRegistradoPor = idUsuarioActual;
+    }
+
+    private decimal TotalTrabajadores()
+    {
+        return configuracion.Trabajadores.Sum(t => t.Porcentaje);
+    }
+
+    private decimal TotalGeneral()
+    {
+        return configuracion.PorcentajeDomusNet + TotalTrabajadores();
+    }
+
+    private bool DistribucionValida()
+    {
+        return Math.Abs(TotalGeneral() - 100) <= 0.01m;
+    }
+
+    private decimal TotalRebajosReporte()
+    {
+        if (detalle?.Resumen == null)
+        {
+            return 0;
+        }
+
+        return detalle.Resumen.PorcentajeIVA +
+               detalle.Resumen.PorcentajeCruzRoja +
+               detalle.Resumen.Porcentaje911;
+    }
+
+    private void AgregarTrabajador()
+    {
+        configuracion.Trabajadores.Add(new TrabajadorDistribucionRequest
+        {
+            TipoDistribucion = "Otro",
+            Porcentaje = 0
+        });
+    }
+
+    private void QuitarTrabajador(TrabajadorDistribucionRequest trabajador)
+    {
+        configuracion.Trabajadores.Remove(trabajador);
+    }
+
+    private async Task GuardarConfiguracion()
+    {
+        mensaje = null;
+
+        if (!DistribucionValida())
+        {
+            MostrarMensaje("La suma de DomusNet y trabajadores debe ser 100%.", true);
+            return;
+        }
+
+        guardandoConfiguracion = true;
+
+        try
+        {
+            configuracion.IdCreadoPor = idUsuarioActual;
+
+            var resultado = await ReportesService.GuardarConfiguracionAsync(configuracion);
+
+            MostrarMensaje(
+                resultado?.Mensaje ?? "No se obtuvo respuesta del servidor.",
+                resultado?.Resultado != 1
+            );
+        }
+        finally
+        {
+            guardandoConfiguracion = false;
+        }
+    }
+
+    private async Task GenerarReporte()
+    {
+        mensaje = null;
+
+        generandoReporte = true;
+
+        try
+        {
+            generar.IdRegistradoPor = idUsuarioActual;
+
+            if (string.IsNullOrWhiteSpace(generar.Quincena))
+            {
+                generar.Quincena = null;
+            }
+
+            var resultado = await ReportesService.GenerarReporteAsync(generar);
+
+            MostrarMensaje(
+                resultado?.Mensaje ?? "No se obtuvo respuesta del servidor.",
+                resultado?.Resultado != 1
+            );
+
+            if (resultado?.Resultado == 1)
+            {
+                idReporteConsulta = resultado.IdGenerado;
+                await ConsultarReporte();
+            }
+        }
+        finally
+        {
+            generandoReporte = false;
+        }
+    }
+
+    private async Task ConsultarReporte()
+    {
+        mensaje = null;
+
+        consultandoReporte = true;
+
+        try
+        {
+            detalle = await ReportesService.ObtenerDetalleAsync(idReporteConsulta);
+
+            if (detalle == null)
+            {
+                MostrarMensaje("No se encontró el reporte.", true);
+            }
+        }
+        catch
+        {
+            MostrarMensaje("No se pudo consultar el reporte.", true);
+        }
+        finally
+        {
+            consultandoReporte = false;
+        }
+    }
+
+    private async Task DescargarPdf()
+    {
+        mensaje = null;
+
+        if (detalle?.Resumen == null)
+        {
+            MostrarMensaje("Primero consultá un reporte.", true);
+            return;
+        }
+
+        cargandoPdf = true;
+
+        try
+        {
+            var idReporte = detalle.Resumen.IdIngresoMensual;
+
+            var pdf = await ReportesService.DescargarPdfAsync(idReporte);
+
+            if (pdf == null)
+            {
+                MostrarMensaje("No se pudo generar el PDF.", true);
+                return;
+            }
+
+            var base64 = Convert.ToBase64String(pdf);
+
+            await JS.InvokeVoidAsync(
+                "domusDownloadFile",
+                $"reporte-ingresos-{idReporte}.pdf",
+                "application/pdf",
+                base64
+            );
+
+            MostrarMensaje("PDF generado correctamente.", false);
+        }
+        finally
+        {
+            cargandoPdf = false;
+        }
+    }
+
+    private void MostrarMensaje(string texto, bool esError)
+    {
+        mensaje = texto;
+        mensajeEsError = esError;
+    }
+
+    private string Colon(decimal monto)
+    {
+        return $"₡{monto:N2}";
+    }
+
+    private string Texto(string? valor, string reemplazo)
+    {
+        return string.IsNullOrWhiteSpace(valor)
+            ? reemplazo
+            : valor;
+    }
+
+    private string NombreMes(int mes)
+    {
+        return mes switch
+        {
+            1 => "Enero",
+            2 => "Febrero",
+            3 => "Marzo",
+            4 => "Abril",
+            5 => "Mayo",
+            6 => "Junio",
+            7 => "Julio",
+            8 => "Agosto",
+            9 => "Septiembre",
+            10 => "Octubre",
+            11 => "Noviembre",
+            12 => "Diciembre",
+            _ => $"Mes {mes}"
+        };
+    }
+}
+
+<style>
+    .input-admin {
+        width: 100%;
+        border-radius: 0.5rem;
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        background: rgba(15, 23, 42, 0.85);
+        padding: 0.65rem 0.75rem;
+        color: #f8fafc;
+        outline: none;
+        font-size: 0.9rem;
+    }
+
+    .input-admin:focus {
+        border-color: rgba(34, 211, 238, 0.7);
+    }
+
+    .input-table {
+        width: 100%;
+        border-radius: 0.375rem;
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        background: rgba(15, 23, 42, 0.7);
+        padding: 0.45rem 0.55rem;
+        color: #f8fafc;
+        outline: none;
+        font-size: 0.85rem;
+    }
+
+    .input-table:focus {
+        border-color: rgba(34, 211, 238, 0.7);
+    }
+
+    summary::marker {
+        color: #22d3ee;
+    }
+</style>

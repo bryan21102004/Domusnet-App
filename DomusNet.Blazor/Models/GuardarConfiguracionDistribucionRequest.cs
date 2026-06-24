@@ -1,4 +1,4 @@
-namespace DomusNet.API.Models;
+namespace DomusNet.Blazor.Models;
 
 public class GuardarConfiguracionDistribucionRequest
 {
@@ -26,6 +26,20 @@ public class GenerarReporteIngresosRequest
     public string? Quincena { get; set; }
     public int IdRegistradoPor { get; set; }
     public string? Notas { get; set; }
+}
+
+public class ResultadoOperacion
+{
+    public int Resultado { get; set; }
+    public string? Mensaje { get; set; }
+    public int IdGenerado { get; set; }
+}
+
+public class DetalleReporteIngresoResponse
+{
+    public ReporteIngresoResumen? Resumen { get; set; }
+    public List<DistribucionIngresoDetalle> Distribuciones { get; set; } = new();
+    public List<DistribucionPorTipoResumen> TotalesPorTipo { get; set; } = new();
 }
 
 public class ReporteIngresoResumen
@@ -70,15 +84,4 @@ public class DistribucionPorTipoResumen
 {
     public string? TipoDistribucion { get; set; }
     public decimal TotalAsignado { get; set; }
-}
-
-public class DetalleReporteIngresoResponse
-{
-    public ReporteIngresoResumen? Resumen { get; set; }
-
-    public IEnumerable<DistribucionIngresoDetalle> Distribuciones { get; set; }
-        = Enumerable.Empty<DistribucionIngresoDetalle>();
-
-    public IEnumerable<DistribucionPorTipoResumen> TotalesPorTipo { get; set; }
-        = Enumerable.Empty<DistribucionPorTipoResumen>();
 }
