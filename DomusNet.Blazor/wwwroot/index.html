@@ -43,6 +43,13 @@
         link.click();
         document.body.removeChild(link);
     };
+
+    window.domusScrollToElement = (elementId) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    };
 </script>
 </body>
 

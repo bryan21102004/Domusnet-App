@@ -12,4 +12,6 @@ public interface IUsuariosService
     Task<int> EditarAsync(int idUsuario, UsuarioUpdateDto dto);
     Task<int> EliminarAsync(int idUsuario);
     Task<int> CambiarContrasenaAsync(int idUsuario, string password);
+
+    Task<ValidacionDesactivacionDto> ValidarDesactivacionAsync(int idUsuario);
 }
