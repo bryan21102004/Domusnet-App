@@ -40,7 +40,7 @@ public class UsuariosController : ControllerBase
         return result.Resultado switch
         {
             1 => Ok(new { mensaje = "Usuario creado correctamente", id = result.IdGenerado }),
-            -1 => BadRequest(new { mensaje = "El correo ya existe" }),
+            -1 => BadRequest(new { mensaje = "Ese correo ya está registrado con un usuario activo. Usá otro correo o reactivá el usuario existente." }),
             -2 => BadRequest(new { mensaje = "Rol invalido" }),
             _ => StatusCode(500, new { mensaje = "Error desconocido" })
         };
@@ -54,7 +54,7 @@ public class UsuariosController : ControllerBase
         {
             1 => Ok(new { mensaje = "Usuario actualizado correctamente" }),
             0 => NotFound(new { mensaje = "Usuario no encontrado" }),
-            -1 => BadRequest(new { mensaje = "El correo ya existe" }),
+            -1 => BadRequest(new { mensaje = "Ese correo ya está registrado con otro usuario activo." }),
             -2 => BadRequest(new { mensaje = "Rol invalido" }),
             _ => StatusCode(500, new { mensaje = "Error desconocido" })
         };
@@ -82,5 +82,48 @@ public class UsuariosController : ControllerBase
             0 => NotFound(new { mensaje = "Usuario no encontrado" }),
             _ => StatusCode(500, new { mensaje = "Error desconocido" })
         };
+    }
+
+    [HttpPut("{id}/reactivar")]
+    public async Task<IActionResult> Reactivar(int id)
+    {
+        var usuario = await _service.BuscarAsync(id);
+        if (usuario == null)
+            return NotFound(new { mensaje = "Usuario no encontrado" });
+
+        if (usuario.Activo)
+            return BadRequest(new { mensaje = "El usuario ya está activo" });
+
+        var result = await _service.EditarAsync(id, new UsuarioUpdateDto
+        {
+            Nombre = usuario.Nombre,
+            Correo = usuario.Correo,
+            Telefono = usuario.Telefono,
+            IdRol = usuario.IdRol,
+            Activo = true
+        });
+
+        return result switch
+        {
+            1 => Ok(new { mensaje = "Usuario reactivado correctamente" }),
+            -1 => BadRequest(new { mensaje = "Ya existe otro usuario activo con ese correo" }),
+            _ => StatusCode(500, new { mensaje = "Error al reactivar usuario" })
+        };
+    }
+
+    [HttpGet("{id}/validar-desactivacion")]
+    public async Task<IActionResult> ValidarDesactivacion(int id)
+    {
+        var data = await _service.ValidarDesactivacionAsync(id);
+
+        var detalles = string.IsNullOrWhiteSpace(data.Detalles)
+            ? []
+            : data.Detalles.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+        return Ok(new
+        {
+            tieneActividadPendiente = data.TieneActividadPendiente == 1,
+            detalles
+        });
     }
 }

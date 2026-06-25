@@ -855,9 +855,24 @@ BEGIN
         RETURN;
     END
 
-    IF EXISTS (SELECT 1 FROM Usuarios WHERE Correo = @Correo)
+    IF EXISTS (SELECT 1 FROM Usuarios WHERE Correo = @Correo AND Activo = 1)
     BEGIN
         SELECT -1 AS Resultado, 0 AS IdGenerado;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM Usuarios WHERE Correo = @Correo AND Activo = 0)
+    BEGIN
+        UPDATE Usuarios
+        SET Nombre = @Nombre,
+            Contrasena = @Contrasena,
+            Telefono = @Telefono,
+            IdRol = @IdRol,
+            Activo = 1,
+            FechaModificacion = GETUTCDATE()
+        WHERE Correo = @Correo;
+
+        SELECT 1 AS Resultado, (SELECT IdUsuario FROM Usuarios WHERE Correo = @Correo) AS IdGenerado;
         RETURN;
     END
 
@@ -892,7 +907,7 @@ BEGIN
         RETURN;
     END
 
-    IF EXISTS (SELECT 1 FROM Usuarios WHERE Correo = @Correo AND IdUsuario <> @IdUsuario)
+    IF EXISTS (SELECT 1 FROM Usuarios WHERE Correo = @Correo AND IdUsuario <> @IdUsuario AND Activo = 1)
     BEGIN
         SELECT -1 AS Resultado;
         RETURN;
@@ -1875,5 +1890,78 @@ BEGIN
         ON i.IdRegistradoPor = u.IdUsuario
 
     ORDER BY i.Fecha DESC, i.IdIngreso DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE validarDesactivacionUsuario
+    @IdUsuario INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Detalles NVARCHAR(2000) = N'';
+    DECLARE @VentasActivas INT = 0;
+    DECLARE @SolicitudesEnProceso INT = 0;
+    DECLARE @InstalacionesVendedor INT = 0;
+    DECLARE @InstalacionesTecnico INT = 0;
+    DECLARE @TicketsAbiertos INT = 0;
+
+    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IdUsuario = @IdUsuario)
+    BEGIN
+        SELECT 0 AS TieneActividadPendiente, N'' AS Detalles;
+        RETURN;
+    END
+
+    SELECT @VentasActivas = COUNT(*)
+    FROM Ventas v
+    INNER JOIN AsignacionesPaquete ap ON v.IdAsignacion = ap.IdAsignacion
+    WHERE ap.IdVendedor = @IdUsuario
+      AND v.Estado = 'Activa'
+      AND ap.Estado = 'Activa';
+
+    SELECT @SolicitudesEnProceso = COUNT(*)
+    FROM SolicitudesServicio
+    WHERE IdVendedorAsignado = @IdUsuario
+      AND Estado IN ('Pendiente', 'Atendida', 'Programada');
+
+    SELECT @InstalacionesVendedor = COUNT(*)
+    FROM InstalacionesProgramadas
+    WHERE IdVendedorPrograma = @IdUsuario
+      AND Estado IN ('Programada', 'Reprogramada');
+
+    SELECT @InstalacionesTecnico = COUNT(*)
+    FROM InstalacionesProgramadas
+    WHERE IdTecnicoAsignado = @IdUsuario
+      AND Estado IN ('Programada', 'Reprogramada');
+
+    SELECT @TicketsAbiertos = COUNT(*)
+    FROM Tickets
+    WHERE IdAsignadoA = @IdUsuario
+      AND Estado IN ('Pendiente', 'EnProceso');
+
+    IF @VentasActivas > 0
+        SET @Detalles = @Detalles + CAST(@VentasActivas AS NVARCHAR(10)) + N' venta(s) activa(s)|';
+
+    IF @SolicitudesEnProceso > 0
+        SET @Detalles = @Detalles + CAST(@SolicitudesEnProceso AS NVARCHAR(10)) + N' solicitud(es) en proceso|';
+
+    IF @InstalacionesVendedor > 0
+        SET @Detalles = @Detalles + CAST(@InstalacionesVendedor AS NVARCHAR(10)) + N' instalación(es) programada(s) como vendedor|';
+
+    IF @InstalacionesTecnico > 0
+        SET @Detalles = @Detalles + CAST(@InstalacionesTecnico AS NVARCHAR(10)) + N' instalación(es) pendiente(s) como técnico|';
+
+    IF @TicketsAbiertos > 0
+        SET @Detalles = @Detalles + CAST(@TicketsAbiertos AS NVARCHAR(10)) + N' ticket(s) abierto(s)|';
+
+    IF LEN(@Detalles) > 0
+        SET @Detalles = LEFT(@Detalles, LEN(@Detalles) - 1);
+
+    SELECT
+        CASE
+            WHEN @VentasActivas + @SolicitudesEnProceso + @InstalacionesVendedor + @InstalacionesTecnico + @TicketsAbiertos > 0
+            THEN 1 ELSE 0
+        END AS TieneActividadPendiente,
+        @Detalles AS Detalles;
 END;
 GO

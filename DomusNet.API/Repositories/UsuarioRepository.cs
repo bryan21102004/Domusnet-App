@@ -92,4 +92,15 @@ public class UsuariosRepository : IUsuariosRepository
             },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<ValidacionDesactivacionDto> ValidarDesactivacionAsync(int idUsuario)
+    {
+        using var connection = _context.CreateConnection();
+
+        return await connection.QueryFirstOrDefaultAsync<ValidacionDesactivacionDto>(
+            "validarDesactivacionUsuario",
+            new { IdUsuario = idUsuario },
+            commandType: CommandType.StoredProcedure)
+            ?? new ValidacionDesactivacionDto();
+    }
 }

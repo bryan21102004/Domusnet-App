@@ -53,3 +53,9 @@ public class CambiarContrasenaDto
 {
     public string Password { get; set; } = string.Empty;
 }
+
+public class ValidacionDesactivacionDto
+{
+    public int TieneActividadPendiente { get; set; }
+    public string? Detalles { get; set; }
+}
