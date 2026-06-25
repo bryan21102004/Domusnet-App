@@ -20,4 +20,5 @@ builder.Services.AddScoped<ClientesVendedorService>();
 builder.Services.AddScoped<AdminIngresosService>();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<ReportesService>();
+builder.Services.AddScoped<TicketsFrontendService>();
 await builder.Build().RunAsync();

@@ -711,6 +711,19 @@ BEGIN
         INSERT INTO Notificaciones (IdUsuarioDestino, IdTicket, Mensaje, Leida, FechaEnvio)
         VALUES (@IdAsignadoA, @IdTicket, 'Se le ha asignado un nuevo ticket: ' + @Titulo, 0, GETUTCDATE());
     END
+    ELSE
+    BEGIN
+        INSERT INTO Notificaciones (IdUsuarioDestino, IdTicket, Mensaje, Leida, FechaEnvio)
+        SELECT u.IdUsuario, @IdTicket,
+               CASE WHEN @EsGlobal = 1
+                    THEN 'Nueva avería global reportada: ' + @Titulo
+                    ELSE 'Nuevo reporte de avería: ' + @Titulo
+               END,
+               0, GETUTCDATE()
+        FROM Usuarios u
+        INNER JOIN Roles r ON u.IdRol = r.IdRol
+        WHERE r.NombreRol IN ('Administrador', 'Tecnico') AND u.Activo = 1;
+    END
 
     SELECT 1 AS Resultado, @IdTicket AS IdGenerado;
 END
@@ -764,6 +777,29 @@ BEGIN
     FROM Tickets
     WHERE EsGlobal = 1 AND Estado <> 'Resuelto'
     ORDER BY FechaCreacion DESC;
+END
+GO
+
+CREATE OR ALTER PROCEDURE buscarClienteActivoPorTelefono
+    @Telefono NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP 1 IdCliente, NombreCompleto, Direccion
+    FROM Clientes
+    WHERE Telefono = @Telefono AND Activo = 1;
+END
+GO
+
+CREATE OR ALTER PROCEDURE listarClientesActivosConCorreo
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT NombreCompleto, Correo
+    FROM Clientes
+    WHERE Activo = 1
+      AND Correo IS NOT NULL
+      AND LTRIM(RTRIM(Correo)) <> '';
 END
 GO
 

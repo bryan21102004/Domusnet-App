@@ -1,4 +1,8 @@
 @page "/reportar-averia"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@inject TicketsFrontendService TicketsService
+@inject ToastService Toast
 
 <PageTitle>Reportar Avería — DomusNet</PageTitle>
 
@@ -18,34 +22,96 @@
     </div>
 
     <div class="domus-card animate-fade-in-up stagger-1">
-        <form class="space-y-5">
+        <form class="space-y-5" @onsubmit="EnviarReporte" @onsubmit:preventDefault="true">
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Nombre completo</label>
                 <input type="text" placeholder="Tu nombre"
+                       @bind="reporte.NombreCompleto"
                        class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Dirección</label>
                 <input type="text" placeholder="Tu dirección"
+                       @bind="reporte.Direccion"
                        class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Teléfono</label>
                 <input type="tel" placeholder="Tu número de teléfono"
+                       @bind="reporte.Telefono"
                        class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Descripción del problema</label>
                 <textarea rows="4" placeholder="Describe la avería o problema..."
+                          @bind="reporte.DescripcionProblema"
                           class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors resize-none"></textarea>
             </div>
-          
-            <button type="submit" class="btn-primary-domus w-full justify-center py-3 text-base mt-2">
+
+            <button type="submit"
+                    disabled="@enviando"
+                    class="btn-primary-domus w-full justify-center py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                 </svg>
-                Enviar Reporte
+                @(enviando ? "Enviando..." : "Enviar Reporte")
             </button>
         </form>
     </div>
 </section>
+
+@code {
+    private ReportarAveriaRequest reporte = new();
+    private bool enviando = false;
+
+    private async Task EnviarReporte()
+    {
+        if (string.IsNullOrWhiteSpace(reporte.NombreCompleto))
+        {
+            Toast.Warning("Debe ingresar su nombre completo.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(reporte.Telefono))
+        {
+            Toast.Warning("Debe ingresar su teléfono.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(reporte.Direccion))
+        {
+            Toast.Warning("Debe ingresar su dirección.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(reporte.DescripcionProblema))
+        {
+            Toast.Warning("Debe describir el problema.");
+            return;
+        }
+
+        enviando = true;
+
+        try
+        {
+            var resultado = await TicketsService.ReportarAveriaAsync(reporte);
+
+            if (resultado == null)
+            {
+                Toast.Error("No se pudo registrar el reporte. Verifique que la API esté activa.");
+                return;
+            }
+
+            Toast.Success(resultado.Mensaje ?? "Reporte de avería creado correctamente.");
+            reporte = new ReportarAveriaRequest();
+        }
+        catch
+        {
+            Toast.Error("No se pudo enviar el reporte.");
+        }
+        finally
+        {
+            enviando = false;
+        }
+    }
+}
