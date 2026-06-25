@@ -15,4 +15,6 @@ public interface IUsuariosRepository
     Task<int> EliminarAsync(int idUsuario);
 
     Task<int> CambiarContrasenaAsync(int idUsuario, string contrasenaHash);
+
+    Task<ValidacionDesactivacionDto> ValidarDesactivacionAsync(int idUsuario);
 }

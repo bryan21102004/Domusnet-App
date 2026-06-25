@@ -1,0 +1,918 @@
+@page "/admin/usuarios"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@using DomusNet.Blazor.Helpers
+@inject AdminUsuariosService UsuariosService
+@inject AuthFrontendService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+<PageTitle>Usuarios — Administrador</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">
+                    Módulo administrativo
+                </p>
+
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Gestión de <span class="gradient-text">Usuarios</span>
+                </h1>
+
+                <p class="text-domus-text-secondary mt-2">
+                    Creá, editá y administrá el acceso de vendedores, técnicos y administradores.
+                </p>
+            </div>
+
+            <div class="flex gap-3">
+                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="VolverPanel">
+                    Volver
+                </button>
+
+                <button class="btn-primary-domus px-5 py-3"
+                        @onclick="CargarUsuarios">
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Total usuarios</p>
+                <p class="text-3xl font-extrabold text-domus-text mt-2">@usuarios.Count</p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Activos</p>
+                <p class="text-3xl font-extrabold text-emerald-300 mt-2">
+                    @usuarios.Count(u => u.Activo)
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Vendedores</p>
+                <p class="text-3xl font-extrabold text-cyan-300 mt-2">
+                    @usuarios.Count(u => u.NombreRol.Equals("Vendedor", StringComparison.OrdinalIgnoreCase))
+                </p>
+            </div>
+
+            <div class="domus-card">
+                <p class="text-sm text-domus-text-secondary">Técnicos</p>
+                <p class="text-3xl font-extrabold text-yellow-300 mt-2">
+                    @usuarios.Count(u => u.NombreRol.Equals("Tecnico", StringComparison.OrdinalIgnoreCase))
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+            <div class="xl:col-span-1" id="formulario-usuario">
+                <div class="domus-card sticky top-24">                    <div class="mb-6">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3.75 3.75 0 00-7.5 0M15 11.25a3 3 0 11-6 0 3 3 0 016 0zM4.5 19.5a6.75 6.75 0 0113.5 0" />
+                                </svg>
+                            </div>
+
+                            <h2 class="text-2xl font-bold text-domus-text">
+                                @(modoEdicion ? "Editar usuario" : "Nuevo usuario")
+                            </h2>
+                        </div>
+
+                        <p class="text-sm text-domus-text-secondary">
+                            @(modoEdicion
+                                ? "Modificá los datos del usuario seleccionado."
+                                : "Completá los datos para registrar un nuevo acceso interno.")
+                        </p>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(mensaje))
+                    {
+                        <div class="@claseMensaje mb-5">
+                            @mensaje
+                        </div>
+                    }
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">Nombre completo</label>
+                            <input type="text"
+                                   @bind="formNombre"
+                                   @bind:event="oninput"
+                                   class="@ClaseInput(errorNombre)"
+                                   placeholder="Ej: Juan Pérez" />
+                            @if (!string.IsNullOrWhiteSpace(errorNombre))
+                            {
+                                <p class="text-xs text-red-300 mt-1.5">@errorNombre</p>
+                            }
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">Correo electrónico</label>
+                            <input type="email"
+                                   @bind="formCorreo"
+                                   @bind:event="oninput"
+                                   class="@ClaseInput(errorCorreo)"
+                                   placeholder="usuario@domusnet.com" />
+                            @if (!string.IsNullOrWhiteSpace(errorCorreo))
+                            {
+                                <p class="text-xs text-red-300 mt-1.5">@errorCorreo</p>
+                            }
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">Teléfono</label>
+                            <input type="tel"
+                                   @bind="formTelefono"
+                                   @bind:event="oninput"
+                                   class="@ClaseInput(errorTelefono)"
+                                   placeholder="8888-8888 o +50688888888" />
+                            @if (!string.IsNullOrWhiteSpace(errorTelefono))
+                            {
+                                <p class="text-xs text-red-300 mt-1.5">@errorTelefono</p>
+                            }
+                            else
+                            {
+                                <p class="text-xs text-domus-text-secondary mt-1.5">Opcional. Debe tener 8 dígitos de Costa Rica.</p>
+                            }
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-domus-text mb-1.5">Rol</label>
+                            <select class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                                    @bind="formIdRol">
+                                <option value="1">Administrador</option>
+                                <option value="2">Vendedor</option>
+                                <option value="3">Técnico</option>
+                            </select>
+                        </div>
+
+                        @if (!modoEdicion)
+                        {
+                            <div>
+                                <label class="block text-sm font-medium text-domus-text mb-1.5">Contraseña</label>
+                                <input type="password"
+                                       @bind="formPassword"
+                                       @bind:event="oninput"
+                                       class="@ClaseInput(errorPassword)"
+                                       placeholder="Mínimo 6 caracteres" />
+                                @if (!string.IsNullOrWhiteSpace(errorPassword))
+                                {
+                                    <p class="text-xs text-red-300 mt-1.5">@errorPassword</p>
+                                }
+                            </div>                        }
+                        else
+                        {
+                            <div class="flex items-center justify-between p-4 rounded-xl bg-domus-dark border border-domus-border">
+                                <div>
+                                    <p class="text-sm font-medium text-domus-text">Estado del usuario</p>
+                                    <p class="text-xs text-domus-text-secondary mt-1">
+                                        Los usuarios inactivos no pueden iniciar sesión.
+                                    </p>
+                                </div>
+
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox"
+                                           class="sr-only peer"
+                                           @bind="formActivo" />
+                                    <div class="w-11 h-6 bg-domus-border rounded-full peer peer-checked:bg-emerald-500/80 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                </label>
+                            </div>
+                        }
+
+                        <div class="flex flex-col gap-3 pt-2">
+                            <button class="btn-primary-domus w-full justify-center"
+                                    disabled="@guardando"
+                                    @onclick="GuardarUsuario">
+                                @(guardando
+                                    ? "Guardando..."
+                                    : (modoEdicion ? "Actualizar usuario" : "Crear usuario"))
+                            </button>
+
+                            @if (modoEdicion)
+                            {
+                                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors w-full"
+                                        @onclick="CancelarEdicion">
+                                    Cancelar edición
+                                </button>
+
+                                <button class="px-5 py-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/20 transition-colors w-full"
+                                        @onclick="AbrirModalContrasena">
+                                    Cambiar contraseña
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xl:col-span-2">
+                <div class="domus-card mb-5">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-domus-text">Usuarios registrados</h2>
+                            <p class="text-sm text-domus-text-secondary mt-1">
+                                Mostrando @usuariosFiltrados.Count() de @usuarios.Count usuario(s).
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                                    @bind="filtroRol">
+                                <option value="">Todos los roles</option>
+                                <option value="Administrador">Administrador</option>
+                                <option value="Vendedor">Vendedor</option>
+                                <option value="Tecnico">Técnico</option>
+                            </select>
+
+                            <select class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                                    @bind="filtroEstado">
+                                <option value="">Todos</option>
+                                <option value="activo">Activos</option>
+                                <option value="inactivo">Inactivos</option>
+                            </select>
+
+                            <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan min-w-[220px]"
+                                   placeholder="Buscar nombre o correo..."
+                                   @bind="busqueda" />
+                        </div>
+                    </div>
+                </div>
+
+                @if (cargando)
+                {
+                    <div class="domus-card text-center py-12">
+                        <p class="text-domus-text-secondary">Cargando usuarios...</p>
+                    </div>
+                }
+                else if (!usuariosFiltrados.Any())
+                {
+                    <div class="domus-card text-center py-12">
+                        <h3 class="text-xl font-bold text-domus-text mb-2">No hay usuarios para mostrar</h3>
+                        <p class="text-domus-text-secondary">
+                            Creá un nuevo usuario o ajustá los filtros de búsqueda.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="domus-card overflow-hidden p-0">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[900px] text-sm">
+                                <thead class="bg-domus-dark border-b border-domus-border">
+                                    <tr class="text-left">
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Usuario</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Rol</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Contacto</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Estado</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Registro</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody class="divide-y divide-domus-border">
+                                    @foreach (var usuario in usuariosFiltrados)
+                                    {
+                                        var seleccionado = modoEdicion && idUsuarioEditando == usuario.IdUsuario;
+
+                                        <tr class="@(seleccionado ? "bg-cyan-500/5" : "hover:bg-white/[0.03]") transition-colors">
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="font-bold text-domus-text">@usuario.Nombre</p>
+                                                <p class="text-xs text-domus-text-secondary mt-1">#@usuario.IdUsuario</p>
+                                            </td>
+
+                                            <td class="px-5 py-5 align-top">
+                                                <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold border @ObtenerClaseRol(usuario.NombreRol)">
+                                                    @FormatearRol(usuario.NombreRol)
+                                                </span>
+                                            </td>
+
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="text-domus-text">@usuario.Correo</p>
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    @(string.IsNullOrWhiteSpace(usuario.Telefono) ? "Sin teléfono" : usuario.Telefono)
+                                                </p>
+                                            </td>
+
+                                            <td class="px-5 py-5 align-top">
+                                                <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold border @(usuario.Activo ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" : "bg-red-500/10 text-red-300 border-red-500/30")">
+                                                    @(usuario.Activo ? "Activo" : "Inactivo")
+                                                </span>
+                                            </td>
+
+                                            <td class="px-5 py-5 align-top">
+                                                <p class="text-domus-text font-semibold">
+                                                    @usuario.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")
+                                                </p>
+                                                <p class="text-xs text-domus-text-secondary mt-1">
+                                                    @usuario.FechaCreacion.ToLocalTime().ToString("hh:mm tt")
+                                                </p>
+                                            </td>
+
+                                            <td class="px-5 py-5 align-top">
+                                                <div class="flex items-center justify-end gap-2 flex-wrap">
+                                                    <button class="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-domus-cyan-light text-xs font-semibold hover:bg-cyan-500/20 transition-colors"
+                                                            title="Editar"
+                                                            @onclick="() => IniciarEdicionAsync(usuario)">
+                                                        Editar
+                                                    </button>
+
+                                                    @if (usuario.Activo && usuario.IdUsuario != idUsuarioActual)
+                                                    {
+                                                        <button class="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold hover:bg-red-500/20 transition-colors"
+                                                                title="Desactivar acceso"
+                                                                @onclick="() => ConfirmarDesactivarAsync(usuario)">
+                                                            Desactivar
+                                                        </button>
+                                                    }
+                                                    else if (!usuario.Activo)
+                                                    {
+                                                        <button class="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                                                                title="Reactivar acceso"
+                                                                disabled="@guardando"
+                                                                @onclick="() => ReactivarUsuarioAsync(usuario)">
+                                                            Reactivar
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (mostrarModalContrasena)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="domus-card w-full max-w-md animate-fade-in-up">
+            <h3 class="text-xl font-bold text-domus-text mb-2">Cambiar contraseña</h3>
+            <p class="text-sm text-domus-text-secondary mb-6">
+                Nueva contraseña para <span class="text-domus-cyan-light font-semibold">@formNombre</span>
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-domus-text mb-1.5">Nueva contraseña</label>
+                    <input type="password"
+                           @bind="nuevaContrasena"
+                           class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                           placeholder="Mínimo 6 caracteres" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-domus-text mb-1.5">Confirmar contraseña</label>
+                    <input type="password"
+                           @bind="confirmarContrasena"
+                           class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
+                           placeholder="Repetí la contraseña" />
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button class="flex-1 px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="CerrarModalContrasena">
+                    Cancelar
+                </button>
+
+                <button class="flex-1 btn-primary-domus justify-center"
+                        disabled="@guardandoContrasena"
+                        @onclick="GuardarContrasena">
+                    @(guardandoContrasena ? "Guardando..." : "Actualizar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mostrarModalDesactivar && usuarioADesactivar is not null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="domus-card w-full max-w-lg animate-fade-in-up">
+            <div class="w-12 h-12 rounded-xl @(validacionDesactivacion?.TieneActividadPendiente == true ? "bg-yellow-500/10 border-yellow-500/20" : "bg-red-500/10 border-red-500/20") border flex items-center justify-center mb-4">
+                <svg class="w-6 h-6 @(validacionDesactivacion?.TieneActividadPendiente == true ? "text-yellow-300" : "text-red-300")" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78A1.5 1.5 0 0022.18 18L13.71 3.86a1.5 1.5 0 00-2.42 0z" />
+                </svg>
+            </div>
+
+            <h3 class="text-xl font-bold text-domus-text mb-2">
+                @(validacionDesactivacion?.TieneActividadPendiente == true
+                    ? "Actividad en proceso detectada"
+                    : "Desactivar usuario")
+            </h3>
+
+            @if (validacionDesactivacion?.TieneActividadPendiente == true)
+            {
+                <p class="text-sm text-domus-text-secondary mb-4">
+                    <span class="text-domus-text font-semibold">@usuarioADesactivar.Nombre</span> tiene procesos activos en el sistema:
+                </p>
+
+                <ul class="mb-6 space-y-2">
+                    @foreach (var detalle in validacionDesactivacion.Detalles)
+                    {
+                        <li class="flex items-start gap-2 text-sm text-yellow-200 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
+                            <span class="text-yellow-300 mt-0.5">•</span>
+                            <span>@detalle</span>
+                        </li>
+                    }
+                </ul>
+
+                <p class="text-sm text-domus-text-secondary mb-6">
+                    Solo desactivá al usuario si es una emergencia. De lo contrario, finalizá o reasigná los procesos pendientes primero.
+                </p>
+            }
+            else
+            {
+                <p class="text-sm text-domus-text-secondary mb-6">
+                    El usuario <span class="text-domus-text font-semibold">@usuarioADesactivar.Nombre</span> quedará inactivo y no podrá iniciar sesión. Podés reactivarlo después con el botón <span class="text-emerald-300 font-semibold">Reactivar</span> o creando de nuevo el mismo correo.
+                </p>
+            }
+
+            <div class="flex gap-3">
+                <button class="flex-1 px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="CancelarDesactivar">
+                    Cancelar
+                </button>
+
+                <button class="flex-1 px-5 py-3 rounded-lg @(validacionDesactivacion?.TieneActividadPendiente == true ? "bg-yellow-500/20 border-yellow-500/40 text-yellow-200" : "bg-red-500/20 border-red-500/40 text-red-300") border font-semibold hover:opacity-90 transition-colors"
+                        disabled="@guardando"
+                        @onclick="ConfirmarDesactivacionFinal">
+                    @(guardando
+                        ? "Procesando..."
+                        : (validacionDesactivacion?.TieneActividadPendiente == true
+                            ? "Desactivar de todas formas"
+                            : "Desactivar"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    private List<UsuarioResponse> usuarios = [];
+    private bool cargando = true;
+    private bool guardando;
+    private bool guardandoContrasena;
+    private bool modoEdicion;
+    private int idUsuarioEditando;
+    private int idUsuarioActual;
+    private bool usuarioOriginalActivo;
+
+    private string formNombre = string.Empty;
+    private string formCorreo = string.Empty;
+    private string? formTelefono;
+    private int formIdRol = 2;
+    private string formPassword = string.Empty;
+    private bool formActivo = true;
+
+    private string errorNombre = string.Empty;
+    private string errorCorreo = string.Empty;
+    private string errorTelefono = string.Empty;
+    private string errorPassword = string.Empty;
+
+    private string busqueda = string.Empty;
+    private string filtroRol = string.Empty;
+    private string filtroEstado = string.Empty;
+
+    private string mensaje = string.Empty;
+    private string claseMensaje = string.Empty;
+
+    private bool mostrarModalContrasena;
+    private string nuevaContrasena = string.Empty;
+    private string confirmarContrasena = string.Empty;
+
+    private bool mostrarModalDesactivar;
+    private bool desactivarDesdeEdicion;
+    private UsuarioResponse? usuarioADesactivar;
+    private ValidacionDesactivacionResponse? validacionDesactivacion;
+
+    private IEnumerable<UsuarioResponse> usuariosFiltrados =>
+        usuarios.Where(u =>
+        {
+            var coincideBusqueda = string.IsNullOrWhiteSpace(busqueda)
+                || u.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase)
+                || u.Correo.Contains(busqueda, StringComparison.OrdinalIgnoreCase);
+
+            var coincideRol = string.IsNullOrWhiteSpace(filtroRol)
+                || u.NombreRol.Equals(filtroRol, StringComparison.OrdinalIgnoreCase);
+
+            var coincideEstado = string.IsNullOrWhiteSpace(filtroEstado)
+                || (filtroEstado == "activo" && u.Activo)
+                || (filtroEstado == "inactivo" && !u.Activo);
+
+            return coincideBusqueda && coincideRol && coincideEstado;
+        });
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rol = await AuthService.ObtenerRolAsync();
+
+        if (!string.Equals(rol?.Trim(), "Administrador", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/acceso-interno");
+            return;
+        }
+
+        idUsuarioActual = await AuthService.ObtenerUsuarioIdAsync();
+        await CargarUsuarios();
+    }
+
+    private async Task CargarUsuarios()
+    {
+        cargando = true;
+        mensaje = string.Empty;
+
+        usuarios = await UsuariosService.ListarAsync();
+        cargando = false;
+    }
+
+    private bool ValidarFormulario(bool incluirContrasena)
+    {
+        LimpiarErroresCampos();
+
+        var nombreValido = ValidacionesFormularioUsuario.ValidarNombre(formNombre);
+        var correoValido = ValidacionesFormularioUsuario.ValidarCorreo(formCorreo);
+        var telefonoValido = ValidacionesFormularioUsuario.ValidarTelefono(formTelefono);
+
+        if (!nombreValido.Valido) errorNombre = nombreValido.Mensaje;
+        if (!correoValido.Valido) errorCorreo = correoValido.Mensaje;
+        if (!telefonoValido.Valido) errorTelefono = telefonoValido.Mensaje;
+
+        if (incluirContrasena)
+        {
+            var contrasenaValida = ValidacionesFormularioUsuario.ValidarContrasena(formPassword);
+            if (!contrasenaValida.Valido) errorPassword = contrasenaValida.Mensaje;
+        }
+
+        return nombreValido.Valido && correoValido.Valido && telefonoValido.Valido
+            && (!incluirContrasena || string.IsNullOrWhiteSpace(errorPassword));
+    }
+
+    private async Task GuardarUsuario()
+    {
+        mensaje = string.Empty;
+
+        if (!ValidarFormulario(!modoEdicion))
+        {
+            if (string.IsNullOrWhiteSpace(errorNombre) &&
+                string.IsNullOrWhiteSpace(errorCorreo) &&
+                string.IsNullOrWhiteSpace(errorTelefono) &&
+                string.IsNullOrWhiteSpace(errorPassword))
+            {
+                MostrarError(ObtenerResumenErrores());
+            }
+
+            await ScrollAlFormularioAsync();
+            return;
+        }
+
+        if (modoEdicion && usuarioOriginalActivo && !formActivo)
+        {
+            validacionDesactivacion = await UsuariosService.ValidarDesactivacionAsync(idUsuarioEditando);
+
+            if (validacionDesactivacion.TieneActividadPendiente)
+            {
+                await MostrarValidacionDesactivacionAsync(idUsuarioEditando, desactivarDesdeEdicion: true);
+                return;
+            }
+        }
+
+        await EjecutarGuardadoAsync();
+    }
+
+    private async Task EjecutarGuardadoAsync()
+    {
+        guardando = true;
+
+        if (modoEdicion)
+        {
+            var request = new UsuarioUpdateRequest
+            {
+                Nombre = formNombre.Trim(),
+                Correo = formCorreo.Trim(),
+                Telefono = ObtenerTelefonoNormalizado(),
+                IdRol = formIdRol,
+                Activo = formActivo
+            };
+
+            var resultado = await UsuariosService.EditarAsync(idUsuarioEditando, request);
+            guardando = false;
+
+            if (resultado.Exito)
+            {
+                MostrarExito(resultado.Mensaje);
+                CancelarEdicion();
+                await CargarUsuarios();
+            }
+            else
+            {
+                await MostrarErrorApiAsync(resultado);
+            }
+        }
+        else
+        {
+            var request = new UsuarioCreateRequest
+            {
+                Nombre = formNombre.Trim(),
+                Correo = formCorreo.Trim(),
+                Telefono = ObtenerTelefonoNormalizado(),
+                IdRol = formIdRol,
+                Password = formPassword
+            };
+
+            var resultado = await UsuariosService.CrearAsync(request);
+            guardando = false;
+
+            if (resultado.Exito)
+            {
+                MostrarExito(resultado.Mensaje);
+                LimpiarFormulario();
+                await CargarUsuarios();
+            }
+            else
+            {
+                await MostrarErrorApiAsync(resultado);
+            }
+        }
+    }
+
+    private async Task IniciarEdicionAsync(UsuarioResponse usuario)
+    {
+        modoEdicion = true;
+        idUsuarioEditando = usuario.IdUsuario;
+        usuarioOriginalActivo = usuario.Activo;
+        formNombre = usuario.Nombre;
+        formCorreo = usuario.Correo;
+        formTelefono = usuario.Telefono;
+        formIdRol = usuario.IdRol;
+        formActivo = usuario.Activo;
+        formPassword = string.Empty;
+        LimpiarErroresCampos();
+        mensaje = string.Empty;
+
+        await ScrollAlFormularioAsync();
+    }
+
+    private void CancelarEdicion()
+    {
+        modoEdicion = false;
+        idUsuarioEditando = 0;
+        usuarioOriginalActivo = false;
+        LimpiarFormulario();
+        mensaje = string.Empty;
+    }
+
+    private void LimpiarFormulario()
+    {
+        formNombre = string.Empty;
+        formCorreo = string.Empty;
+        formTelefono = null;
+        formIdRol = 2;
+        formPassword = string.Empty;
+        formActivo = true;
+        LimpiarErroresCampos();
+    }
+
+    private void LimpiarErroresCampos()
+    {
+        errorNombre = string.Empty;
+        errorCorreo = string.Empty;
+        errorTelefono = string.Empty;
+        errorPassword = string.Empty;
+    }
+
+    private string? ObtenerTelefonoNormalizado()
+    {
+        if (string.IsNullOrWhiteSpace(formTelefono))
+            return null;
+
+        var normalizado = ValidacionesFormularioUsuario.NormalizarTelefono(formTelefono);
+        return string.IsNullOrWhiteSpace(normalizado) ? null : normalizado;
+    }
+
+    private static string ClaseInput(string? error)
+    {
+        var baseClase = "w-full px-4 py-3 rounded-lg bg-domus-dark border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none transition-colors";
+        return string.IsNullOrWhiteSpace(error)
+            ? $"{baseClase} border-domus-border focus:border-domus-cyan"
+            : $"{baseClase} border-red-500/50 focus:border-red-400";
+    }
+
+    private async Task ScrollAlFormularioAsync()
+    {
+        await JS.InvokeVoidAsync("domusScrollToElement", "formulario-usuario");
+    }
+
+    private void AbrirModalContrasena()
+    {
+        nuevaContrasena = string.Empty;
+        confirmarContrasena = string.Empty;
+        mostrarModalContrasena = true;
+    }
+
+    private void CerrarModalContrasena()
+    {
+        mostrarModalContrasena = false;
+        nuevaContrasena = string.Empty;
+        confirmarContrasena = string.Empty;
+    }
+
+    private async Task GuardarContrasena()
+    {
+        var contrasenaValida = ValidacionesFormularioUsuario.ValidarContrasena(nuevaContrasena);
+        if (!contrasenaValida.Valido)
+        {
+            MostrarError(contrasenaValida.Mensaje);
+            return;
+        }
+
+        if (nuevaContrasena != confirmarContrasena)
+        {
+            MostrarError("Las contraseñas no coinciden.");
+            return;
+        }
+
+        guardandoContrasena = true;
+
+        var resultado = await UsuariosService.CambiarContrasenaAsync(
+            idUsuarioEditando,
+            new CambiarContrasenaRequest { Password = nuevaContrasena });
+
+        guardandoContrasena = false;
+
+        if (resultado.Exito)
+        {
+            CerrarModalContrasena();
+            MostrarExito(resultado.Mensaje);
+        }
+        else
+        {
+            MostrarError(resultado.Mensaje);
+        }
+    }
+
+    private async Task ConfirmarDesactivarAsync(UsuarioResponse usuario)
+    {
+        await MostrarValidacionDesactivacionAsync(usuario.IdUsuario, desactivarDesdeEdicion: false, usuario);
+    }
+
+    private async Task MostrarValidacionDesactivacionAsync(
+        int idUsuario,
+        bool desactivarDesdeEdicion,
+        UsuarioResponse? usuario = null)
+    {
+        validacionDesactivacion = await UsuariosService.ValidarDesactivacionAsync(idUsuario);
+        this.desactivarDesdeEdicion = desactivarDesdeEdicion;
+        usuarioADesactivar = usuario ?? usuarios.FirstOrDefault(u => u.IdUsuario == idUsuario);
+        mostrarModalDesactivar = true;
+    }
+
+    private void CancelarDesactivar()
+    {
+        mostrarModalDesactivar = false;
+        usuarioADesactivar = null;
+        validacionDesactivacion = null;
+        desactivarDesdeEdicion = false;
+    }
+
+    private async Task ConfirmarDesactivacionFinal()
+    {
+        if (usuarioADesactivar is null)
+            return;
+
+        guardando = true;
+
+        OperacionUsuarioResponse resultado;
+
+        if (desactivarDesdeEdicion)
+        {
+            var request = new UsuarioUpdateRequest
+            {
+                Nombre = formNombre.Trim(),
+                Correo = formCorreo.Trim(),
+                Telefono = ObtenerTelefonoNormalizado(),
+                IdRol = formIdRol,
+                Activo = false
+            };
+
+            var editResult = await UsuariosService.EditarAsync(idUsuarioEditando, request);
+            resultado = editResult;
+        }
+        else
+        {
+            resultado = await UsuariosService.EliminarAsync(usuarioADesactivar.IdUsuario);
+        }
+
+        guardando = false;
+        CancelarDesactivar();
+
+        if (resultado.Exito)
+        {
+            MostrarExito(desactivarDesdeEdicion
+                ? "Usuario desactivado correctamente."
+                : "Usuario desactivado. Seguís viéndolo en la lista como Inactivo o podés reactivarlo.");
+
+            if (modoEdicion)
+                CancelarEdicion();
+
+            await CargarUsuarios();
+        }
+        else
+        {
+            MostrarError(resultado.Mensaje);
+        }
+    }
+
+    private async Task MostrarErrorApiAsync(OperacionUsuarioResponse resultado)
+    {
+        var texto = string.IsNullOrWhiteSpace(resultado.Mensaje)
+            ? "No se pudo completar la operación."
+            : resultado.Mensaje;
+
+        if (texto.Contains("correo", StringComparison.OrdinalIgnoreCase))
+        {
+            errorCorreo = texto;
+        }
+
+        MostrarError(texto);
+        await ScrollAlFormularioAsync();
+    }
+
+    private string ObtenerResumenErrores()
+    {
+        var partes = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(errorNombre))
+            partes.Add($"Nombre: {errorNombre}");
+
+        if (!string.IsNullOrWhiteSpace(errorCorreo))
+            partes.Add($"Correo: {errorCorreo}");
+
+        if (!string.IsNullOrWhiteSpace(errorTelefono))
+            partes.Add($"Teléfono: {errorTelefono}");
+
+        if (!string.IsNullOrWhiteSpace(errorPassword))
+            partes.Add($"Contraseña: {errorPassword}");
+
+        return partes.Count > 0
+            ? string.Join(" · ", partes)
+            : "Revisá los campos marcados antes de continuar.";
+    }
+
+    private async Task ReactivarUsuarioAsync(UsuarioResponse usuario)
+    {
+        guardando = true;
+        mensaje = string.Empty;
+
+        var resultado = await UsuariosService.ReactivarAsync(usuario.IdUsuario);
+
+        guardando = false;
+
+        if (resultado.Exito)
+        {
+            MostrarExito(resultado.Mensaje);
+            await CargarUsuarios();
+        }
+        else
+        {
+            MostrarError(resultado.Mensaje);
+        }
+    }
+
+    private void MostrarExito(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    }
+
+    private void MostrarError(string texto)
+    {
+        mensaje = texto;
+        claseMensaje = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private static string FormatearRol(string rol) =>
+        rol.Equals("Tecnico", StringComparison.OrdinalIgnoreCase) ? "Técnico" : rol;
+
+    private static string ObtenerClaseRol(string rol) =>
+        rol.ToLower() switch
+        {
+            "administrador" => "bg-purple-500/10 text-purple-300 border-purple-500/30",
+            "vendedor" => "bg-cyan-500/10 text-domus-cyan-light border-cyan-500/30",
+            "tecnico" => "bg-yellow-500/10 text-yellow-300 border-yellow-500/30",
+            _ => "bg-domus-dark text-domus-text-secondary border-domus-border"
+        };
+
+    private void VolverPanel()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+}

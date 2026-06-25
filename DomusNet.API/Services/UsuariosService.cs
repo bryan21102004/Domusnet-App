@@ -50,4 +50,9 @@ public class UsuariosService : IUsuariosService
 
         return await _repository.CambiarContrasenaAsync(idUsuario, hash);
     }
+
+    public async Task<ValidacionDesactivacionDto> ValidarDesactivacionAsync(int idUsuario)
+    {
+        return await _repository.ValidarDesactivacionAsync(idUsuario);
+    }
 }
