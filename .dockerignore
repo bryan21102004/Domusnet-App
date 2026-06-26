@@ -1,0 +1,10 @@
+.git
+.vs
+.vscode
+.idea
+**/obj
+**/bin
+node_modules
+**/*.user
+**/.gitignore
+*.md

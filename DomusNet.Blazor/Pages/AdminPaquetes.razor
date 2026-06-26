@@ -1,0 +1,659 @@
+@page "/admin/paquetes"
+@using DomusNet.Blazor.Models
+@using DomusNet.Blazor.Services
+@inject PaquetesFrontendService PaquetesService
+@inject AuthFrontendService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Paquetes — Administrador</PageTitle>
+
+<section class="min-h-[calc(100vh-4rem)] px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+            <div>
+                <p class="text-sm text-domus-cyan-light font-semibold mb-2">Módulo administrativo</p>
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-domus-text">
+                    Gestión de <span class="gradient-text">Paquetes</span>
+                </h1>
+                <p class="text-domus-text-secondary mt-2">
+                    Creá, editá y administrá los planes de servicio disponibles.
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="VolverPanel">
+                    Volver
+                </button>
+                <button class="btn-primary-domus px-5 py-3"
+                        @onclick="AbrirModalNuevo">
+                    + Nuevo paquete
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats en fila -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="domus-card py-4 px-5">
+                <p class="text-sm text-domus-text-secondary">Total paquetes</p>
+                <p class="text-2xl font-extrabold text-domus-text mt-1">@paquetes.Count</p>
+            </div>
+            <div class="domus-card py-4 px-5">
+                <p class="text-sm text-domus-text-secondary">Activos</p>
+                <p class="text-2xl font-extrabold text-emerald-300 mt-1">
+                    @paquetes.Count(p => p.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase))
+                </p>
+            </div>
+            <div class="domus-card py-4 px-5">
+                <p class="text-sm text-domus-text-secondary">Inactivos</p>
+                <p class="text-2xl font-extrabold text-red-300 mt-1">
+                    @paquetes.Count(p => !p.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase))
+                </p>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="domus-card mb-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <p class="text-sm text-domus-text-secondary">
+                        Mostrando <span class="text-domus-text font-semibold">@paquetesFiltrados.Count()</span> de <span class="text-domus-text font-semibold">@paquetes.Count</span> paquete(s)
+                    </p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <select class="px-4 py-2.5 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan text-sm"
+                            @bind="filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="Activo">Activos</option>
+                        <option value="Inactivo">Inactivos</option>
+                    </select>
+                    <input class="px-4 py-2.5 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan text-sm min-w-[200px]"
+                           placeholder="Buscar por nombre..."
+                           @bind="busqueda"
+                           @bind:event="oninput" />
+                    <button class="px-4 py-2.5 rounded-lg bg-domus-dark border border-domus-border text-domus-text-secondary hover:text-domus-text hover:border-cyan-500/50 transition-colors text-sm"
+                            @onclick="CargarPaquetes">
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje fuera del modal -->
+        @if (!string.IsNullOrWhiteSpace(mensajeGlobal))
+        {
+            <div class="@claseMensajeGlobal mb-5">@mensajeGlobal</div>
+        }
+
+        <!-- Tabla -->
+        @if (cargando)
+        {
+            <div class="domus-card text-center py-12">
+                <p class="text-domus-text-secondary">Cargando paquetes...</p>
+            </div>
+        }
+        else if (!paquetesFiltrados.Any())
+        {
+            <div class="domus-card text-center py-16">
+                <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-domus-text mb-2">No hay paquetes para mostrar</h3>
+                <p class="text-domus-text-secondary mb-6">Creá el primer plan de servicio para comenzar.</p>
+                <button class="btn-primary-domus px-5 py-3" @onclick="AbrirModalNuevo">
+                    + Nuevo paquete
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="domus-card overflow-hidden p-0">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[700px] text-sm">
+                        <thead class="bg-domus-dark border-b border-domus-border">
+                            <tr class="text-left">
+                                <th class="px-5 py-4">
+                                    <button class="flex items-center gap-1.5 font-semibold text-domus-text-secondary hover:text-domus-text transition-colors"
+                                            @onclick='() => OrdenarPor("nombre")'>
+                                        Paquete @IconOrden("nombre")
+                                    </button>
+                                </th>
+                                <th class="px-5 py-4">
+                                    <button class="flex items-center gap-1.5 font-semibold text-domus-text-secondary hover:text-domus-text transition-colors"
+                                            @onclick='() => OrdenarPor("velocidad")'>
+                                        Velocidad @IconOrden("velocidad")
+                                    </button>
+                                </th>
+                                <th class="px-5 py-4">
+                                    <button class="flex items-center gap-1.5 font-semibold text-domus-text-secondary hover:text-domus-text transition-colors"
+                                            @onclick='() => OrdenarPor("precio")'>
+                                        Precio @IconOrden("precio")
+                                    </button>
+                                </th>
+                                <th class="px-5 py-4">
+                                    <button class="flex items-center gap-1.5 font-semibold text-domus-text-secondary hover:text-domus-text transition-colors"
+                                            @onclick='() => OrdenarPor("porcentaje")'>
+                                        % Dist. @IconOrden("porcentaje")
+                                    </button>
+                                </th>
+                                <th class="px-5 py-4">
+                                    <button class="flex items-center gap-1.5 font-semibold text-domus-text-secondary hover:text-domus-text transition-colors"
+                                            @onclick='() => OrdenarPor("estado")'>
+                                        Estado @IconOrden("estado")
+                                    </button>
+                                </th>
+                                <th class="px-5 py-4 font-semibold text-domus-text-secondary text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-domus-border">
+                            @foreach (var paquete in paquetesFiltrados)
+                            {
+                                var activo = paquete.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase);
+
+                                <tr class="hover:bg-white/3 transition-colors">
+                                    <td class="px-5 py-4 align-middle">
+                                        <p class="font-bold text-domus-text">@paquete.Nombre</p>
+                                        @if (!string.IsNullOrWhiteSpace(paquete.Descripcion))
+                                        {
+                                            <p class="text-xs text-domus-text-secondary mt-0.5 max-w-[220px] truncate">@paquete.Descripcion</p>
+                                        }
+                                    </td>
+                                    <td class="px-5 py-4 align-middle">
+                                        <span class="font-semibold text-domus-cyan-light">
+                                            @(string.IsNullOrWhiteSpace(paquete.Velocidad) ? "—" : $"{paquete.Velocidad} Mbps")
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 align-middle">
+                                        <span class="font-semibold text-domus-text">₡@paquete.Precio.ToString("N0")</span>
+                                        <span class="text-xs text-domus-text-secondary">/mes</span>
+                                    </td>
+                                    <td class="px-5 py-4 align-middle">
+                                        <span class="text-domus-text">
+                                            @(paquete.PorcentajeDistribucion > 0 ? $"{paquete.PorcentajeDistribucion:N2}%" : "—")
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 align-middle">
+                                        <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold border @(activo ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30" : "bg-red-500/10 text-red-300 border-red-500/30")">
+                                            @(activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+                                    <td class="px-5 py-4 align-middle">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-domus-cyan-light text-xs font-semibold hover:bg-cyan-500/20 transition-colors"
+                                                    @onclick="() => AbrirModalEdicion(paquete)">
+                                                Editar
+                                            </button>
+                                            @if (activo)
+                                            {
+                                                <button class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold hover:bg-red-500/20 transition-colors"
+                                                        disabled="@guardando"
+                                                        @onclick="() => ToggleEstadoAsync(paquete)">
+                                                    Desactivar
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                                                        disabled="@guardando"
+                                                        @onclick="() => ToggleEstadoAsync(paquete)">
+                                                    Activar
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+    </div>
+</section>
+
+<!-- Modal formulario -->
+@if (mostrarModal)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="domus-card w-full max-w-lg animate-fade-in-up max-h-[90vh] overflow-y-auto">
+
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-domus-cyan-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-domus-text">
+                            @(modoEdicion ? "Editar paquete" : "Nuevo paquete")
+                        </h2>
+                        <p class="text-xs text-domus-text-secondary mt-0.5">
+                            @(modoEdicion ? "Modificá los datos del plan." : "Completá los datos del nuevo plan.")
+                        </p>
+                    </div>
+                </div>
+                <button class="w-8 h-8 flex items-center justify-center rounded-lg text-domus-text-secondary hover:text-domus-text hover:bg-white/5 transition-colors"
+                        @onclick="CerrarModal">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(mensajeModal))
+            {
+                <div class="@claseMensajeModal mb-5">@mensajeModal</div>
+            }
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-domus-text mb-1.5">Nombre del paquete</label>
+                    <input type="text"
+                           @bind="formNombre"
+                           @bind:event="oninput"
+                           class="@ClaseInput(errorNombre)"
+                           placeholder="Ej: Plan Básico" />
+                    @if (!string.IsNullOrWhiteSpace(errorNombre))
+                    {
+                        <p class="text-xs text-red-300 mt-1.5">@errorNombre</p>
+                    }
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-domus-text mb-1.5">Descripción <span class="text-domus-text-secondary font-normal">(opcional)</span></label>
+                    <textarea @bind="formDescripcion"
+                              @bind:event="oninput"
+                              rows="2"
+                              class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan transition-colors resize-none text-sm"
+                              placeholder="Descripción breve del plan"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-domus-text mb-1.5">Velocidad (Mbps)</label>
+                        <input type="text"
+                               @bind="formVelocidad"
+                               @bind:event="oninput"
+                               class="@ClaseInput(errorVelocidad)"
+                               placeholder="Ej: 50" />
+                        @if (!string.IsNullOrWhiteSpace(errorVelocidad))
+                        {
+                            <p class="text-xs text-red-300 mt-1.5">@errorVelocidad</p>
+                        }
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-domus-text mb-1.5">Precio mensual (₡)</label>
+                        <input type="number"
+                               @bind="formPrecio"
+                               @bind:event="oninput"
+                               min="0"
+                               step="500"
+                               class="@ClaseInput(errorPrecio)"
+                               placeholder="Ej: 25000" />
+                        @if (!string.IsNullOrWhiteSpace(errorPrecio))
+                        {
+                            <p class="text-xs text-red-300 mt-1.5">@errorPrecio</p>
+                        }
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-domus-text mb-1.5">
+                        % Distribución <span class="text-domus-text-secondary font-normal">(opcional)</span>
+                    </label>
+                    <input type="number"
+                           @bind="formPorcentaje"
+                           @bind:event="oninput"
+                           min="0"
+                           max="100"
+                           step="0.01"
+                           class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan transition-colors text-sm"
+                           placeholder="Ej: 30.00" />
+                    <p class="text-xs text-domus-text-secondary mt-1">Porcentaje que se distribuye internamente.</p>
+                </div>
+
+                @if (modoEdicion)
+                {
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-domus-dark border border-domus-border">
+                        <div>
+                            <p class="text-sm font-medium text-domus-text">Estado del paquete</p>
+                            <p class="text-xs text-domus-text-secondary mt-0.5">Los paquetes inactivos no aparecen en el portal público.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" @bind="formActivo" />
+                            <div class="w-11 h-6 bg-domus-border rounded-full peer peer-checked:bg-emerald-500/80 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                }
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button class="flex-1 px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors"
+                        @onclick="CerrarModal">
+                    Cancelar
+                </button>
+                <button class="flex-1 btn-primary-domus justify-center"
+                        disabled="@guardando"
+                        @onclick="GuardarPaquete">
+                    @(guardando ? "Guardando..." : (modoEdicion ? "Actualizar" : "Crear paquete"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PaqueteResponse> paquetes = [];
+    private bool cargando = true;
+    private bool guardando;
+    private bool modoEdicion;
+    private bool mostrarModal;
+    private int idPaqueteEditando;
+
+    private string formNombre = string.Empty;
+    private string? formDescripcion;
+    private string? formVelocidad;
+    private decimal formPrecio;
+    private decimal? formPorcentaje;
+    private bool formActivo = true;
+
+    private string errorNombre = string.Empty;
+    private string errorVelocidad = string.Empty;
+    private string errorPrecio = string.Empty;
+
+    private string busqueda = string.Empty;
+    private string filtroEstado = string.Empty;
+
+    private string columnaOrden = "nombre";
+    private bool ordenAscendente = true;
+
+    private string mensajeGlobal = string.Empty;
+    private string claseMensajeGlobal = string.Empty;
+    private string mensajeModal = string.Empty;
+    private string claseMensajeModal = string.Empty;
+
+    private IEnumerable<PaqueteResponse> paquetesFiltrados
+    {
+        get
+        {
+            var filtrados = paquetes.Where(p =>
+            {
+                var coincideBusqueda = string.IsNullOrWhiteSpace(busqueda)
+                    || p.Nombre.Contains(busqueda, StringComparison.OrdinalIgnoreCase);
+                var coincideEstado = string.IsNullOrWhiteSpace(filtroEstado)
+                    || p.Estado.Equals(filtroEstado, StringComparison.OrdinalIgnoreCase);
+                return coincideBusqueda && coincideEstado;
+            });
+
+            return columnaOrden switch
+            {
+                "nombre"     => ordenAscendente ? filtrados.OrderBy(p => p.Nombre) : filtrados.OrderByDescending(p => p.Nombre),
+                "velocidad"  => ordenAscendente ? filtrados.OrderBy(p => ParseVelocidad(p.Velocidad)) : filtrados.OrderByDescending(p => ParseVelocidad(p.Velocidad)),
+                "precio"     => ordenAscendente ? filtrados.OrderBy(p => p.Precio) : filtrados.OrderByDescending(p => p.Precio),
+                "porcentaje" => ordenAscendente ? filtrados.OrderBy(p => p.PorcentajeDistribucion ?? 0) : filtrados.OrderByDescending(p => p.PorcentajeDistribucion ?? 0),
+                "estado"     => ordenAscendente ? filtrados.OrderBy(p => p.Estado) : filtrados.OrderByDescending(p => p.Estado),
+                _            => filtrados
+            };
+        }
+    }
+
+    private void OrdenarPor(string columna)
+    {
+        if (columnaOrden == columna)
+            ordenAscendente = !ordenAscendente;
+        else
+        {
+            columnaOrden = columna;
+            ordenAscendente = true;
+        }
+    }
+
+    private static double ParseVelocidad(string? velocidad)
+    {
+        if (string.IsNullOrWhiteSpace(velocidad)) return 0;
+        var solo = new string(velocidad.Where(c => char.IsDigit(c) || c == '.').ToArray());
+        return double.TryParse(solo, out var v) ? v : 0;
+    }
+
+    private RenderFragment IconOrden(string columna) => builder =>
+    {
+        if (columnaOrden != columna)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "text-domus-border");
+            builder.AddContent(2, "⇅");
+            builder.CloseElement();
+            return;
+        }
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "text-domus-cyan-light");
+        builder.AddContent(2, ordenAscendente ? "↑" : "↓");
+        builder.CloseElement();
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rol = await AuthService.ObtenerRolAsync();
+        if (!string.Equals(rol?.Trim(), "Administrador", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/acceso-interno");
+            return;
+        }
+        await CargarPaquetes();
+    }
+
+    private async Task CargarPaquetes()
+    {
+        cargando = true;
+        paquetes = await PaquetesService.ListarTodosAsync();
+        cargando = false;
+    }
+
+    private void AbrirModalNuevo()
+    {
+        modoEdicion = false;
+        idPaqueteEditando = 0;
+        LimpiarFormulario();
+        mensajeModal = string.Empty;
+        mostrarModal = true;
+    }
+
+    private void AbrirModalEdicion(PaqueteResponse paquete)
+    {
+        modoEdicion = true;
+        idPaqueteEditando = paquete.IdPaquete;
+        formNombre = paquete.Nombre;
+        formDescripcion = paquete.Descripcion;
+        formVelocidad = paquete.Velocidad;
+        formPrecio = paquete.Precio;
+        formPorcentaje = paquete.PorcentajeDistribucion > 0 ? paquete.PorcentajeDistribucion : null;
+        formActivo = paquete.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase);
+        errorNombre = string.Empty;
+        errorVelocidad = string.Empty;
+        errorPrecio = string.Empty;
+        mensajeModal = string.Empty;
+        mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        modoEdicion = false;
+        idPaqueteEditando = 0;
+        LimpiarFormulario();
+    }
+
+    private bool ValidarFormulario()
+    {
+        errorNombre = string.Empty;
+        errorVelocidad = string.Empty;
+        errorPrecio = string.Empty;
+        var valido = true;
+
+        if (string.IsNullOrWhiteSpace(formNombre))
+        {
+            errorNombre = "El nombre del paquete es obligatorio.";
+            valido = false;
+        }
+        else if (formNombre.Trim().Length > 100)
+        {
+            errorNombre = "El nombre no puede superar los 100 caracteres.";
+            valido = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(formVelocidad) && formVelocidad.Trim().Length > 50)
+        {
+            errorVelocidad = "La velocidad no puede superar los 50 caracteres.";
+            valido = false;
+        }
+
+        if (formPrecio <= 0)
+        {
+            errorPrecio = "El precio debe ser mayor a cero.";
+            valido = false;
+        }
+
+        return valido;
+    }
+
+    private async Task GuardarPaquete()
+    {
+        mensajeModal = string.Empty;
+
+        if (!ValidarFormulario())
+            return;
+
+        guardando = true;
+
+        if (modoEdicion)
+        {
+            var request = new PaqueteUpdateRequest
+            {
+                Nombre = formNombre.Trim(),
+                Descripcion = string.IsNullOrWhiteSpace(formDescripcion) ? null : formDescripcion.Trim(),
+                Velocidad = string.IsNullOrWhiteSpace(formVelocidad) ? null : formVelocidad.Trim(),
+                Precio = formPrecio,
+                PorcentajeDistribucion = formPorcentaje,
+                Estado = formActivo ? "Activo" : "Inactivo"
+            };
+
+            var resultado = await PaquetesService.EditarAsync(idPaqueteEditando, request);
+            guardando = false;
+
+            if (resultado.Exito)
+            {
+                CerrarModal();
+                MostrarExitoGlobal(resultado.Mensaje);
+                await CargarPaquetes();
+            }
+            else
+            {
+                MostrarErrorModal(resultado.Mensaje);
+            }
+        }
+        else
+        {
+            var request = new PaqueteCreateRequest
+            {
+                Nombre = formNombre.Trim(),
+                Descripcion = string.IsNullOrWhiteSpace(formDescripcion) ? null : formDescripcion.Trim(),
+                Velocidad = string.IsNullOrWhiteSpace(formVelocidad) ? null : formVelocidad.Trim(),
+                Precio = formPrecio,
+                PorcentajeDistribucion = formPorcentaje
+            };
+
+            var resultado = await PaquetesService.CrearAsync(request);
+            guardando = false;
+
+            if (resultado.Exito)
+            {
+                CerrarModal();
+                MostrarExitoGlobal(resultado.Mensaje);
+                await CargarPaquetes();
+            }
+            else
+            {
+                MostrarErrorModal(resultado.Mensaje);
+            }
+        }
+    }
+
+    private async Task ToggleEstadoAsync(PaqueteResponse paquete)
+    {
+        guardando = true;
+        mensajeGlobal = string.Empty;
+
+        var nuevoEstado = paquete.Estado.Equals("Activo", StringComparison.OrdinalIgnoreCase)
+            ? "Inactivo" : "Activo";
+
+        var request = new PaqueteUpdateRequest
+        {
+            Nombre = paquete.Nombre,
+            Descripcion = paquete.Descripcion,
+            Velocidad = paquete.Velocidad,
+            Precio = paquete.Precio,
+            PorcentajeDistribucion = paquete.PorcentajeDistribucion > 0 ? paquete.PorcentajeDistribucion : null as decimal?,
+            Estado = nuevoEstado
+        };
+
+        var resultado = await PaquetesService.EditarAsync(paquete.IdPaquete, request);
+        guardando = false;
+
+        if (resultado.Exito)
+        {
+            MostrarExitoGlobal($"Paquete {nuevoEstado.ToLower()} correctamente.");
+            await CargarPaquetes();
+        }
+        else
+        {
+            MostrarErrorGlobal(resultado.Mensaje);
+        }
+    }
+
+    private void LimpiarFormulario()
+    {
+        formNombre = string.Empty;
+        formDescripcion = null;
+        formVelocidad = null;
+        formPrecio = 0;
+        formPorcentaje = null;
+        formActivo = true;
+        errorNombre = string.Empty;
+        errorVelocidad = string.Empty;
+        errorPrecio = string.Empty;
+    }
+
+    private static string ClaseInput(string? error)
+    {
+        const string baseClase = "w-full px-4 py-3 rounded-lg bg-domus-dark border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none transition-colors text-sm";
+        return string.IsNullOrWhiteSpace(error)
+            ? $"{baseClase} border-domus-border focus:border-domus-cyan"
+            : $"{baseClase} border-red-500/50 focus:border-red-400";
+    }
+
+    private void MostrarExitoGlobal(string texto)
+    {
+        mensajeGlobal = texto;
+        claseMensajeGlobal = "p-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+    }
+
+    private void MostrarErrorGlobal(string texto)
+    {
+        mensajeGlobal = texto;
+        claseMensajeGlobal = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private void MostrarErrorModal(string texto)
+    {
+        mensajeModal = texto;
+        claseMensajeModal = "p-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300";
+    }
+
+    private void VolverPanel() => Navigation.NavigateTo("/admin");
+}
