@@ -16,3 +16,4 @@ COPY DomusNet.API/Data/ingresos.sql         /docker-init/ingresos.sql
 USER mssql
 
 ENTRYPOINT ["/entrypoint.sh"]
+
