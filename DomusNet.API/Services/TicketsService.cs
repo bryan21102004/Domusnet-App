@@ -81,7 +81,8 @@ public class TicketsService : ITicketsService
             return new SpResultDto
             {
                 Resultado = 0,
-                IdGenerado = 0
+                IdGenerado = 0,
+                Mensaje = "Debe completar todos los campos del formulario."
             };
         }
 
@@ -89,24 +90,23 @@ public class TicketsService : ITicketsService
 
         var cliente = await _repository.BuscarClienteActivoPorTelefonoAsync(telefono);
 
-        int? idCliente = null;
-        var nombreCliente = dto.NombreCompleto.Trim();
-        var direccionCliente = dto.Direccion.Trim();
-
-        if (cliente != null)
+        if (cliente == null)
         {
-            idCliente = cliente.IdCliente;
-
-            if (!string.IsNullOrWhiteSpace(cliente.NombreCompleto))
+            return new SpResultDto
             {
-                nombreCliente = cliente.NombreCompleto;
-            }
-
-            if (!string.IsNullOrWhiteSpace(cliente.Direccion))
-            {
-                direccionCliente = cliente.Direccion;
-            }
+                Resultado = 0,
+                IdGenerado = 0,
+                Mensaje = "No se encontró un cliente activo con ese teléfono. Solo clientes con servicio instalado pueden reportar averías."
+            };
         }
+
+        var nombreCliente = !string.IsNullOrWhiteSpace(cliente.NombreCompleto)
+            ? cliente.NombreCompleto
+            : dto.NombreCompleto.Trim();
+
+        var direccionCliente = !string.IsNullOrWhiteSpace(cliente.Direccion)
+            ? cliente.Direccion
+            : dto.Direccion.Trim();
 
         var titulo = $"Avería de Cliente - {nombreCliente}";
 
@@ -119,9 +119,19 @@ public class TicketsService : ITicketsService
         return await _repository.CrearReporteClienteAsync(
             titulo,
             descripcionFormateada,
-            idCliente,
+            cliente.IdCliente,
             _idUsuarioSistema
         );
+    }
+
+    public async Task<ClienteReporteDto?> VerificarClientePorTelefonoAsync(string telefono)
+    {
+        if (string.IsNullOrWhiteSpace(telefono))
+        {
+            return null;
+        }
+
+        return await _repository.BuscarClienteActivoPorTelefonoAsync(telefono.Trim());
     }
 
     public async Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto)

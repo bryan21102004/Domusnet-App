@@ -17,39 +17,68 @@
             Reportar <span class="gradient-text">Avería</span>
         </h1>
         <p class="text-domus-text-secondary">
-            Completa el formulario y nuestro equipo técnico atenderá tu solicitud.
+            Solo clientes con servicio activo pueden reportar averías. Verificá tu teléfono registrado en DomusNet.
         </p>
     </div>
 
     <div class="domus-card animate-fade-in-up stagger-1">
         <form class="space-y-5" @onsubmit="EnviarReporte" @onsubmit:preventDefault="true">
             <div>
+                <label class="block text-sm font-medium text-domus-text mb-1.5">Teléfono registrado</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="tel" placeholder="El teléfono de tu servicio DomusNet"
+                           @bind="reporte.Telefono"
+                           @bind:after="ReiniciarVerificacion"
+                           class="flex-1 px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                    <button type="button"
+                            disabled="@verificando"
+                            @onclick="VerificarTelefono"
+                            class="px-5 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text hover:border-cyan-500/50 transition-colors disabled:opacity-60">
+                        @(verificando ? "Verificando..." : "Verificar")
+                    </button>
+                </div>
+                <p class="text-xs text-domus-text-secondary mt-2">
+                    Debe coincidir con el teléfono del cliente activo en nuestro sistema.
+                </p>
+            </div>
+
+            @if (clienteVerificado)
+            {
+                <div class="p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm">
+                    Cliente verificado. Podés continuar con el reporte de avería.
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(mensajeVerificacion))
+            {
+                <div class="p-4 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
+                    @mensajeVerificacion
+                </div>
+            }
+
+            <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Nombre completo</label>
-                <input type="text" placeholder="Tu nombre"
+                <input type="text" placeholder="Se completará al verificar el teléfono"
                        @bind="reporte.NombreCompleto"
-                       class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                       readonly="@clienteVerificado"
+                       class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors @(clienteVerificado ? "opacity-80" : "")" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Dirección</label>
-                <input type="text" placeholder="Tu dirección"
+                <input type="text" placeholder="Se completará al verificar el teléfono"
                        @bind="reporte.Direccion"
-                       class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-domus-text mb-1.5">Teléfono</label>
-                <input type="tel" placeholder="Tu número de teléfono"
-                       @bind="reporte.Telefono"
-                       class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                       readonly="@clienteVerificado"
+                       class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors @(clienteVerificado ? "opacity-80" : "")" />
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Descripción del problema</label>
                 <textarea rows="4" placeholder="Describe la avería o problema..."
                           @bind="reporte.DescripcionProblema"
-                          class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors resize-none"></textarea>
+                          disabled="@(!clienteVerificado)"
+                          class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors resize-none disabled:opacity-60"></textarea>
             </div>
 
             <button type="submit"
-                    disabled="@enviando"
+                    disabled="@(enviando || !clienteVerificado)"
                     class="btn-primary-domus w-full justify-center py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -63,24 +92,64 @@
 @code {
     private ReportarAveriaRequest reporte = new();
     private bool enviando = false;
+    private bool verificando = false;
+    private bool clienteVerificado = false;
+    private string mensajeVerificacion = string.Empty;
 
-    private async Task EnviarReporte()
+    private void ReiniciarVerificacion()
     {
-        if (string.IsNullOrWhiteSpace(reporte.NombreCompleto))
-        {
-            Toast.Warning("Debe ingresar su nombre completo.");
-            return;
-        }
+        clienteVerificado = false;
+        mensajeVerificacion = string.Empty;
+        reporte.NombreCompleto = string.Empty;
+        reporte.Direccion = string.Empty;
+    }
+
+    private async Task VerificarTelefono()
+    {
+        mensajeVerificacion = string.Empty;
 
         if (string.IsNullOrWhiteSpace(reporte.Telefono))
         {
-            Toast.Warning("Debe ingresar su teléfono.");
+            Toast.Warning("Debe ingresar su teléfono registrado.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(reporte.Direccion))
+        verificando = true;
+
+        try
         {
-            Toast.Warning("Debe ingresar su dirección.");
+            var cliente = await TicketsService.VerificarClienteAsync(reporte.Telefono);
+
+            if (cliente == null)
+            {
+                clienteVerificado = false;
+                reporte.NombreCompleto = string.Empty;
+                reporte.Direccion = string.Empty;
+                mensajeVerificacion = "No se encontró un cliente activo con ese teléfono. Solo clientes con servicio instalado pueden reportar averías.";
+                return;
+            }
+
+            clienteVerificado = true;
+            reporte.NombreCompleto = cliente.NombreCompleto;
+            reporte.Direccion = cliente.Direccion;
+            Toast.Success("Teléfono verificado correctamente.");
+        }
+        catch
+        {
+            clienteVerificado = false;
+            mensajeVerificacion = "No se pudo verificar el teléfono. Verifique que la API esté activa.";
+        }
+        finally
+        {
+            verificando = false;
+        }
+    }
+
+    private async Task EnviarReporte()
+    {
+        if (!clienteVerificado)
+        {
+            Toast.Warning("Debe verificar su teléfono antes de enviar el reporte.");
             return;
         }
 
@@ -96,14 +165,16 @@
         {
             var resultado = await TicketsService.ReportarAveriaAsync(reporte);
 
-            if (resultado == null)
+            if (!resultado.Exitoso)
             {
-                Toast.Error("No se pudo registrar el reporte. Verifique que la API esté activa.");
+                Toast.Error(resultado.Mensaje ?? "No se pudo registrar el reporte.");
                 return;
             }
 
             Toast.Success(resultado.Mensaje ?? "Reporte de avería creado correctamente.");
             reporte = new ReportarAveriaRequest();
+            clienteVerificado = false;
+            mensajeVerificacion = string.Empty;
         }
         catch
         {

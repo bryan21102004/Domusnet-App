@@ -94,8 +94,25 @@ public class TicketsController : ControllerBase
 
         return BadRequest(new
         {
-            mensaje = "No se pudo registrar el reporte de avería. Verifique que todos los campos estén completos."
+            mensaje = result.Mensaje ?? "No se pudo registrar el reporte de avería."
         });
+    }
+
+    [HttpGet("verificar-cliente")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerificarCliente([FromQuery] string telefono)
+    {
+        var cliente = await _service.VerificarClientePorTelefonoAsync(telefono);
+
+        if (cliente == null)
+        {
+            return NotFound(new
+            {
+                mensaje = "No se encontró un cliente activo con ese teléfono. Solo clientes con servicio instalado pueden reportar averías."
+            });
+        }
+
+        return Ok(cliente);
     }
 
     [HttpPut("{id}/estado")]

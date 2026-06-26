@@ -35,16 +35,45 @@ public class TicketsFrontendService
         }
     }
 
-    public async Task<ResultadoTicketResponse?> ReportarAveriaAsync(ReportarAveriaRequest request)
+    public async Task<OperacionTicketResponse> ReportarAveriaAsync(ReportarAveriaRequest request)
     {
         var response = await _http.PostAsJsonAsync("api/Tickets/reportar-cliente", request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var ok = await response.Content.ReadFromJsonAsync<ResultadoTicketResponse>(JsonOptions);
+            return new OperacionTicketResponse
+            {
+                Exitoso = true,
+                Mensaje = ok?.Mensaje ?? "Reporte de avería creado correctamente.",
+                Id = ok?.Id ?? 0
+            };
+        }
+
+        var error = await response.Content.ReadFromJsonAsync<ResultadoTicketResponse>(JsonOptions);
+        return new OperacionTicketResponse
+        {
+            Exitoso = false,
+            Mensaje = error?.Mensaje ?? "No se pudo registrar el reporte de avería."
+        };
+    }
+
+    public async Task<ClienteVerificadoResponse?> VerificarClienteAsync(string telefono)
+    {
+        if (string.IsNullOrWhiteSpace(telefono))
+        {
+            return null;
+        }
+
+        var url = $"api/Tickets/verificar-cliente?telefono={Uri.EscapeDataString(telefono.Trim())}";
+        var response = await _http.GetAsync(url);
 
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
 
-        return await response.Content.ReadFromJsonAsync<ResultadoTicketResponse>(JsonOptions);
+        return await response.Content.ReadFromJsonAsync<ClienteVerificadoResponse>(JsonOptions);
     }
 
     public async Task<List<TicketResponse>> ListarTicketsAsync(string? estado = null)
