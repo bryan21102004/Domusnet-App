@@ -12,5 +12,6 @@ public interface ITicketsService
     Task<IEnumerable<dynamic>> ListarGlobalesAsync();
     Task<SpResultDto> CrearAsync(TicketCreateDto dto);
     Task<SpResultDto> ReportarClienteAsync(ReportarAveriaClienteDto dto);
+    Task<ClienteReporteDto?> VerificarClientePorTelefonoAsync(string telefono);
     Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto);
 }

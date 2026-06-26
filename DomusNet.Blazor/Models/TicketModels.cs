@@ -63,3 +63,17 @@ public class ResultadoTicketResponse
     public string? Mensaje { get; set; }
     public int Id { get; set; }
 }
+
+public class OperacionTicketResponse
+{
+    public bool Exitoso { get; set; }
+    public string? Mensaje { get; set; }
+    public int Id { get; set; }
+}
+
+public class ClienteVerificadoResponse
+{
+    public int IdCliente { get; set; }
+    public string NombreCompleto { get; set; } = string.Empty;
+    public string Direccion { get; set; } = string.Empty;
+}
