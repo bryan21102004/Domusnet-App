@@ -74,6 +74,10 @@ public static class ValidacionesFormularioUsuario
         return (true, string.Empty);
     }
 
+    private static readonly Regex MayusculaRegex = new(@"[A-Z]", RegexOptions.Compiled);
+    private static readonly Regex MinusculaRegex = new(@"[a-z]", RegexOptions.Compiled);
+    private static readonly Regex NumeroRegex    = new(@"[0-9]", RegexOptions.Compiled);
+
     public static (bool Valido, string Mensaje) ValidarContrasena(string? password, int minLength = 6)
     {
         if (string.IsNullOrWhiteSpace(password))
@@ -84,6 +88,47 @@ public static class ValidacionesFormularioUsuario
 
         return (true, string.Empty);
     }
+
+    public static (bool Valido, string Mensaje) ValidarContrasenaSegura(string? password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            return (false, "La contraseña es obligatoria.");
+        if (password.Length < 8)
+            return (false, "La contraseña debe tener al menos 8 caracteres.");
+        if (!MayusculaRegex.IsMatch(password))
+            return (false, "La contraseña debe contener al menos una letra mayúscula.");
+        if (!MinusculaRegex.IsMatch(password))
+            return (false, "La contraseña debe contener al menos una letra minúscula.");
+        if (!NumeroRegex.IsMatch(password))
+            return (false, "La contraseña debe contener al menos un número.");
+        return (true, string.Empty);
+    }
+
+    public static (bool Valido, string Mensaje) ValidarTelefonoObligatorio(string? telefono)
+    {
+        if (string.IsNullOrWhiteSpace(telefono))
+            return (false, "El teléfono es obligatorio.");
+        return ValidarTelefono(telefono);
+    }
+
+    public static (bool Valido, string Mensaje) ValidarLongitudMinima(string? valor, string nombreCampo, int minimo)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return (false, $"{nombreCampo} es obligatorio.");
+        if (valor.Trim().Length < minimo)
+            return (false, $"{nombreCampo} debe tener al menos {minimo} caracteres.");
+        return (true, string.Empty);
+    }
+
+    public static (bool Valido, string Mensaje) ValidarLongitudMaxima(string? valor, string nombreCampo, int maximo)
+    {
+        if (valor != null && valor.Trim().Length > maximo)
+            return (false, $"{nombreCampo} no puede superar los {maximo} caracteres.");
+        return (true, string.Empty);
+    }
+
+    public static (bool Valido, string Mensaje) ValidarDireccion(string? direccion)
+        => ValidarLongitudMinima(direccion, "La dirección", 10);
 
     public static string NormalizarTelefono(string? telefono)
     {

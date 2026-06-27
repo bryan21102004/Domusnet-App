@@ -1,6 +1,7 @@
 @page "/reportar-averia"
 @using DomusNet.Blazor.Models
 @using DomusNet.Blazor.Services
+@using DomusNet.Blazor.Helpers
 @inject TicketsFrontendService TicketsService
 @inject ToastService Toast
 
@@ -28,8 +29,9 @@
                 <div class="flex flex-col sm:flex-row gap-3">
                     <input type="tel" placeholder="El teléfono de tu servicio DomusNet"
                            @bind="reporte.Telefono"
+                           @bind:event="oninput"
                            @bind:after="ReiniciarVerificacion"
-                           class="flex-1 px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                           class="flex-1 px-4 py-3 rounded-lg bg-domus-dark border @(string.IsNullOrWhiteSpace(errTelefono) ? "border-domus-border" : "border-red-500/50") text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
                     <button type="button"
                             disabled="@verificando"
                             @onclick="VerificarTelefono"
@@ -37,9 +39,16 @@
                         @(verificando ? "Verificando..." : "Verificar")
                     </button>
                 </div>
-                <p class="text-xs text-domus-text-secondary mt-2">
-                    Debe coincidir con el teléfono del cliente activo en nuestro sistema.
-                </p>
+                @if (!string.IsNullOrWhiteSpace(errTelefono))
+                {
+                    <p class="text-xs text-red-300 mt-1.5">@errTelefono</p>
+                }
+                else
+                {
+                    <p class="text-xs text-domus-text-secondary mt-2">
+                        Debe coincidir con el teléfono del cliente activo en nuestro sistema.
+                    </p>
+                }
             </div>
 
             @if (clienteVerificado)
@@ -71,10 +80,21 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-domus-text mb-1.5">Descripción del problema</label>
-                <textarea rows="4" placeholder="Describe la avería o problema..."
+                <textarea rows="4" placeholder="Describe la avería o problema (mínimo 10 caracteres)..."
                           @bind="reporte.DescripcionProblema"
+                          @bind:event="oninput"
                           disabled="@(!clienteVerificado)"
-                          class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors resize-none disabled:opacity-60"></textarea>
+                          class="w-full px-4 py-3 rounded-lg bg-domus-dark border @(string.IsNullOrWhiteSpace(errDescripcion) ? "border-domus-border" : "border-red-500/50") text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors resize-none disabled:opacity-60"></textarea>
+                @if (!string.IsNullOrWhiteSpace(errDescripcion))
+                {
+                    <p class="text-xs text-red-300 mt-1.5">@errDescripcion</p>
+                }
+                else
+                {
+                    <p class="text-xs text-domus-text-secondary mt-1.5">
+                        Máximo 1000 caracteres. Llevás @(reporte.DescripcionProblema?.Length ?? 0).
+                    </p>
+                }
             </div>
 
             <button type="submit"
@@ -95,11 +115,14 @@
     private bool verificando = false;
     private bool clienteVerificado = false;
     private string mensajeVerificacion = string.Empty;
+    private string errTelefono   = string.Empty;
+    private string errDescripcion = string.Empty;
 
     private void ReiniciarVerificacion()
     {
         clienteVerificado = false;
         mensajeVerificacion = string.Empty;
+        errTelefono = string.Empty;
         reporte.NombreCompleto = string.Empty;
         reporte.Direccion = string.Empty;
     }
@@ -107,10 +130,12 @@
     private async Task VerificarTelefono()
     {
         mensajeVerificacion = string.Empty;
+        errTelefono = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(reporte.Telefono))
+        var validacion = ValidacionesFormularioUsuario.ValidarTelefonoObligatorio(reporte.Telefono);
+        if (!validacion.Valido)
         {
-            Toast.Warning("Debe ingresar su teléfono registrado.");
+            errTelefono = validacion.Mensaje;
             return;
         }
 
@@ -147,18 +172,23 @@
 
     private async Task EnviarReporte()
     {
+        errDescripcion = string.Empty;
+
         if (!clienteVerificado)
         {
             Toast.Warning("Debe verificar su teléfono antes de enviar el reporte.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(reporte.DescripcionProblema))
-        {
-            Toast.Warning("Debe describir el problema.");
-            return;
-        }
+        var descVal = ValidacionesFormularioUsuario.ValidarLongitudMinima(
+            reporte.DescripcionProblema, "La descripción del problema", 10);
+        if (!descVal.Valido) { errDescripcion = descVal.Mensaje; return; }
 
+        var descMax = ValidacionesFormularioUsuario.ValidarLongitudMaxima(
+            reporte.DescripcionProblema, "La descripción del problema", 1000);
+        if (!descMax.Valido) { errDescripcion = descMax.Mensaje; return; }
+
+        reporte.DescripcionProblema = reporte.DescripcionProblema!.Trim();
         enviando = true;
 
         try

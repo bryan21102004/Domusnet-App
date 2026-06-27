@@ -1,5 +1,6 @@
 using DomusNet.API.Models;
 using DomusNet.API.Services.Interfaces;
+using DomusNet.API.Services.ReglasNegocio;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,6 +12,7 @@ public class InstalacionesController : ControllerBase
 {
     private readonly IInstalacionService _instalacionService;
     private readonly IEvidenciaInstalacionService _evidenciaService;
+    private readonly ValidacionesGenerales _v = new();
 
     public InstalacionesController(
         IInstalacionService instalacionService,
@@ -32,6 +34,24 @@ public class InstalacionesController : ControllerBase
     [Authorize(Roles = "Administrador,Vendedor")]
     public async Task<IActionResult> ProgramarInstalacion([FromBody] ProgramarInstalacionRequest request)
     {
+        try
+        {
+            _v.ValidarId(request.IdTecnicoAsignado, "Técnico asignado");
+            _v.ValidarId(request.IdVendedorPrograma, "Vendedor");
+            _v.ValidarFechaFutura(request.FechaProgramada, "Fecha programada");
+            _v.ValidarLongitudMinima(request.UbicacionInstalacion?.Trim(), "Ubicación de instalación", 5);
+            _v.ValidarLongitudMaxima(request.NotasVendedor?.Trim(), "Notas del vendedor", 500);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+
+        if (request.UbicacionInstalacion != null)
+            request.UbicacionInstalacion = request.UbicacionInstalacion.Trim();
+        if (request.NotasVendedor != null)
+            request.NotasVendedor = request.NotasVendedor.Trim();
+
         var resultado = await _instalacionService.ProgramarInstalacionAsync(request);
 
         if (resultado.Resultado == 1)

@@ -339,6 +339,16 @@
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(form.NotasVendedor) && form.NotasVendedor.Trim().Length > 500)
+        {
+            MostrarError("Las notas del vendedor no pueden superar los 500 caracteres.");
+            return;
+        }
+
+        form.UbicacionInstalacion = form.UbicacionInstalacion.Trim();
+        if (form.NotasVendedor != null)
+            form.NotasVendedor = form.NotasVendedor.Trim();
+
         guardando = true;
 
         try
