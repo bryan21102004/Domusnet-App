@@ -1850,8 +1850,14 @@ GO
 
 
 
+USE DomusNet;
+GO
 
 CREATE OR ALTER PROCEDURE dbo.listarIngresos
+    @Mes INT = NULL,
+    @Anio INT = NULL,
+    @Quincena NVARCHAR(20) = NULL,
+    @Estado NVARCHAR(20) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1863,14 +1869,15 @@ BEGIN
         c.EstadoPago AS EstadoPago,
 
         i.IdPaquete,
-        p.Nombre AS NombrePaquete,
-        p.Velocidad,
+        ps.Nombre AS NombrePaquete,
+        ps.Velocidad AS Velocidad,
 
         i.Monto,
         i.Fecha,
         i.Descripcion,
         i.TipoIngreso,
         i.MetodoPago,
+        i.Quincena,
         i.Estado,
         i.ReferenciaPago,
         i.FechaProximoPago,
@@ -1879,19 +1886,24 @@ BEGIN
         u.Nombre AS NombreRegistradoPor
 
     FROM dbo.Ingresos i
-
     LEFT JOIN dbo.Clientes c
         ON i.IdCliente = c.IdCliente
 
-    LEFT JOIN dbo.PaquetesServicio p
-        ON i.IdPaquete = p.IdPaquete
+    LEFT JOIN dbo.PaquetesServicio ps
+        ON i.IdPaquete = ps.IdPaquete
 
-    INNER JOIN dbo.Usuarios u
+    LEFT JOIN dbo.Usuarios u
         ON i.IdRegistradoPor = u.IdUsuario
 
-    ORDER BY i.Fecha DESC, i.IdIngreso DESC;
+    WHERE (@Mes IS NULL OR MONTH(i.Fecha) = @Mes)
+      AND (@Anio IS NULL OR YEAR(i.Fecha) = @Anio)
+      AND (@Quincena IS NULL OR i.Quincena = @Quincena)
+      AND (@Estado IS NULL OR i.Estado = @Estado)
+
+    ORDER BY i.Fecha DESC;
 END;
 GO
+
 
 CREATE OR ALTER PROCEDURE validarDesactivacionUsuario
     @IdUsuario INT
@@ -1965,3 +1977,30 @@ BEGIN
         @Detalles AS Detalles;
 END;
 GO
+
+
+CREATE OR ALTER PROCEDURE dbo.listarTrabajadoresDistribucion
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        u.IdUsuario,
+        u.Nombre,
+        r.NombreRol AS Rol
+    FROM dbo.Usuarios u
+    INNER JOIN dbo.Roles r
+        ON u.IdRol = r.IdRol
+    WHERE u.Activo = 1
+      AND LOWER(LTRIM(RTRIM(r.NombreRol))) IN
+      (
+          'administrador',
+          'vendedor',
+          'tecnico',
+          'técnico'
+      )
+    ORDER BY r.NombreRol, u.Nombre;
+END;
+GO
+
+

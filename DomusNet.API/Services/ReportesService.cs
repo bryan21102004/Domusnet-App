@@ -1,6 +1,9 @@
 using DomusNet.API.Models;
 using DomusNet.API.Repositories.Interfaces;
 using DomusNet.API.Services.Interfaces;
+using DomusNet.Shared.DTOs;
+using System.Data;
+using Dapper;
 
 namespace DomusNet.API.Services;
 
@@ -42,4 +45,10 @@ public class ReportesService : IReportesService
     {
         return await _repository.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
     }
+
+ public async Task<IEnumerable<TrabajadorUsuarioResponse>> ListarTrabajadoresAsync()
+    {
+        return await _repository.ListarTrabajadoresAsync();
+    }
+
 }

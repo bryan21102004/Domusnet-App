@@ -1,6 +1,7 @@
 @page "/admin/reportes"
 @using DomusNet.Blazor.Models
 @using DomusNet.Blazor.Services
+@using DomusNet.Shared.DTOs
 @using Microsoft.JSInterop
 @inject ReportesService ReportesService
 @inject AuthFrontendService AuthService
@@ -9,30 +10,43 @@
 
 <PageTitle>Reportes financieros</PageTitle>
 
-<div class="min-h-screen bg-domus-dark text-domus-text px-4 py-6">
+<div class="reportes-page min-h-screen text-domus-text px-4 py-6">
 
-    <div class="max-w-6xl mx-auto space-y-5">
+    <div class="max-w-7xl mx-auto space-y-6">
 
         <!-- Encabezado -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <section class="hero-reportes">
             <div>
-                <h1 class="text-2xl md:text-3xl font-bold">
+                <div class="hero-badge">
+                    DomusNet · Finanzas
+                </div>
+
+                <h1 class="hero-title">
                     Reportes financieros
                 </h1>
-                <p class="text-sm text-domus-text-secondary mt-1">
-                    Generación, consulta y descarga de reportes de ingresos.
+
+                <p class="hero-subtitle">
+                    Generación, consulta, distribución de ingresos y descarga de reportes administrativos.
                 </p>
             </div>
 
-            @if (detalle?.Resumen != null)
-            {
-                <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
-                        disabled="@cargandoPdf"
-                        @onclick="DescargarPdf">
-                    @(cargandoPdf ? "Generando PDF..." : "Descargar PDF")
+            <div class="hero-actions">
+                <button class="btn-soft"
+                        disabled="@cargandoTrabajadores"
+                        @onclick="() => CargarTrabajadoresAutomaticamente(true)">
+                    @(cargandoTrabajadores ? "Actualizando..." : "Actualizar trabajadores")
                 </button>
-            }
-        </div>
+
+                @if (detalle?.Resumen != null)
+                {
+                    <button class="btn-primary"
+                            disabled="@cargandoPdf"
+                            @onclick="DescargarPdf">
+                        @(cargandoPdf ? "Generando PDF..." : "Descargar PDF")
+                    </button>
+                }
+            </div>
+        </section>
 
         @if (!string.IsNullOrWhiteSpace(mensaje))
         {
@@ -41,20 +55,27 @@
             </div>
         }
 
-        <!-- Panel de acciones -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Acciones principales -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
             <!-- Generar reporte -->
-            <div class="lg:col-span-2 rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
-                <h2 class="text-lg font-bold mb-4">
-                    Generar reporte
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="panel-card lg:col-span-2">
+                <div class="panel-header">
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            Mes
-                        </label>
+                        <h2 class="panel-title">Generar reporte</h2>
+                        <p class="panel-description">
+                            Seleccioná el periodo que querés procesar para generar el reporte financiero.
+                        </p>
+                    </div>
+
+                    <span class="status-pill success">
+                        Disponible
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-5">
+                    <div>
+                        <label class="label-admin">Mes</label>
                         <input type="number"
                                min="1"
                                max="12"
@@ -63,18 +84,14 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            Año
-                        </label>
+                        <label class="label-admin">Año</label>
                         <input type="number"
                                class="input-admin"
                                @bind="generar.Anio" />
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            Quincena
-                        </label>
+                        <label class="label-admin">Quincena</label>
                         <select class="input-admin"
                                 @bind="generar.Quincena">
                             <option value="">Mes completo</option>
@@ -84,82 +101,99 @@
                     </div>
 
                     <div class="flex items-end">
-                        <button class="w-full px-4 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 disabled:opacity-60"
+                        <button class="btn-success w-full"
                                 disabled="@generandoReporte"
                                 @onclick="GenerarReporte">
-                            @(generandoReporte ? "Generando..." : "Generar")
+                            @(generandoReporte ? "Generando..." : "Generar reporte")
                         </button>
                     </div>
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-xs text-domus-text-secondary mb-1">
-                        Notas
-                    </label>
-                    <textarea rows="2"
+                    <label class="label-admin">Notas</label>
+                    <textarea rows="3"
                               class="input-admin resize-none"
                               @bind="generar.Notas"
-                              placeholder="Notas del reporte"></textarea>
+                              placeholder="Notas opcionales para el reporte"></textarea>
                 </div>
             </div>
 
             <!-- Consultar reporte -->
-            <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
-                <h2 class="text-lg font-bold mb-4">
-                    Consultar reporte
-                </h2>
-
-                <label class="block text-xs text-domus-text-secondary mb-1">
-                    Id del reporte
-                </label>
-
-                <div class="flex gap-2">
-                    <input type="number"
-                           class="input-admin"
-                           @bind="idReporteConsulta" />
-
-                    <button class="px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-domus-text font-semibold hover:bg-slate-700 disabled:opacity-60"
-                            disabled="@consultandoReporte"
-                            @onclick="ConsultarReporte">
-                        @(consultandoReporte ? "..." : "Ver")
-                    </button>
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">Consultar reporte</h2>
+                        <p class="panel-description">
+                            Buscá un reporte ya generado por su identificador.
+                        </p>
+                    </div>
                 </div>
 
-                @if (detalle?.Resumen != null)
-                {
-                    <div class="mt-4 text-sm text-domus-text-secondary">
-                        Reporte cargado:
-                        <span class="font-semibold text-domus-text">
-                            #@detalle.Resumen.IdIngresoMensual
-                        </span>
-                    </div>
-                }
-            </div>
-        </div>
+                <div class="mt-5">
+                    <label class="label-admin">Id del reporte</label>
 
-        <!-- Configuración compacta -->
-        <details class="rounded-xl bg-slate-900/70 border border-slate-700/60">
-            <summary class="cursor-pointer px-5 py-4 font-semibold">
-                Configuración de distribución
-                <span class="text-sm text-domus-text-secondary font-normal ml-2">
-                    DomusNet @configuracion.PorcentajeDomusNet.ToString("N2")% · Trabajadores @TotalTrabajadores().ToString("N2")%
-                </span>
+                    <div class="flex gap-2">
+                        <input type="number"
+                               class="input-admin"
+                               @bind="idReporteConsulta" />
+
+                        <button class="btn-soft px-5"
+                                disabled="@consultandoReporte"
+                                @onclick="ConsultarReporte">
+                            @(consultandoReporte ? "..." : "Ver")
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mini-info mt-5">
+                    @if (detalle?.Resumen != null)
+                    {
+                        <p class="text-xs text-slate-400">Reporte cargado</p>
+                        <p class="text-xl font-black text-white">
+                            #@detalle.Resumen.IdIngresoMensual
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-xs text-slate-400">Estado</p>
+                        <p class="text-sm font-semibold text-slate-200">
+                            Sin reporte cargado
+                        </p>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <!-- Configuración de distribución -->
+        <details class="panel-card overflow-hidden" open>
+            <summary class="summary-header">
+                <div>
+                    <h2 class="panel-title">Configuración de distribución</h2>
+                    <p class="panel-description">
+                        Los trabajadores se cargan automáticamente desde los usuarios registrados.
+                    </p>
+                </div>
+
+                <div class="summary-totals">
+                    <span>DomusNet @configuracion.PorcentajeDomusNet.ToString("N2")%</span>
+                    <span>Trabajadores @TotalTrabajadores().ToString("N2")%</span>
+                    <span class="@(DistribucionValida() ? "ok" : "bad")">
+                        Total @TotalGeneral().ToString("N2")%
+                    </span>
+                </div>
             </summary>
 
-            <div class="px-5 pb-5 border-t border-slate-700/60">
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
+            <div class="pt-5 border-t border-slate-800/80">
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div class="md:col-span-2">
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            Nombre
-                        </label>
+                        <label class="label-admin">Nombre de configuración</label>
                         <input class="input-admin"
                                @bind="configuracion.Nombre" />
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            % DomusNet
-                        </label>
+                        <label class="label-admin">% DomusNet</label>
                         <input type="number"
                                step="0.01"
                                class="input-admin"
@@ -167,9 +201,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            % IVA
-                        </label>
+                        <label class="label-admin">% IVA</label>
                         <input type="number"
                                step="0.01"
                                class="input-admin"
@@ -177,9 +209,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            % Cruz Roja
-                        </label>
+                        <label class="label-admin">% Cruz Roja</label>
                         <input type="number"
                                step="0.01"
                                class="input-admin"
@@ -187,9 +217,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs text-domus-text-secondary mb-1">
-                            % 911
-                        </label>
+                        <label class="label-admin">% 911</label>
                         <input type="number"
                                step="0.01"
                                class="input-admin"
@@ -197,84 +225,136 @@
                     </div>
                 </div>
 
-                <div class="mt-5 overflow-x-auto rounded-lg border border-slate-700/60">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-800/80 text-domus-text-secondary">
-                            <tr>
-                                <th class="text-left px-4 py-3">Id Usuario</th>
-                                <th class="text-left px-4 py-3">Tipo</th>
-                                <th class="text-right px-4 py-3">Porcentaje</th>
-                                <th class="text-right px-4 py-3">Acción</th>
-                            </tr>
-                        </thead>
+                <!-- Métricas -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div class="metric-card">
+                        <p class="metric-label">Trabajadores cargados</p>
+                        <h3 class="metric-value">
+                            @configuracion.Trabajadores.Count
+                        </h3>
+                    </div>
 
-                        <tbody>
-                            @foreach (var trabajador in configuracion.Trabajadores)
-                            {
-                                <tr class="border-t border-slate-700/60">
-                                    <td class="px-4 py-3">
-                                        <input type="number"
-                                               class="input-table"
-                                               @bind="trabajador.IdUsuario" />
-                                    </td>
+                    <div class="metric-card">
+                        <p class="metric-label">Total trabajadores</p>
+                        <h3 class="metric-value text-emerald-300">
+                            @TotalTrabajadores().ToString("N2")%
+                        </h3>
+                    </div>
 
-                                    <td class="px-4 py-3">
-                                        <select class="input-table"
-                                                @bind="trabajador.TipoDistribucion">
-                                            <option value="Administrador">Administrador</option>
-                                            <option value="Vendedor">Vendedor</option>
-                                            <option value="Tecnico">Técnico</option>
-                                            <option value="Otro">Otro</option>
-                                        </select>
-                                    </td>
-
-                                    <td class="px-4 py-3 text-right">
-                                        <input type="number"
-                                               step="0.01"
-                                               class="input-table text-right"
-                                               @bind="trabajador.Porcentaje" />
-                                    </td>
-
-                                    <td class="px-4 py-3 text-right">
-                                        <button class="text-red-300 hover:text-red-200 text-sm"
-                                                @onclick="() => QuitarTrabajador(trabajador)">
-                                            Quitar
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-
-                        <tfoot class="bg-slate-800/50 border-t border-slate-700/60">
-                            <tr>
-                                <td class="px-4 py-3 font-semibold" colspan="2">
-                                    Total trabajadores
-                                </td>
-                                <td class="px-4 py-3 text-right font-bold">
-                                    @TotalTrabajadores().ToString("N2")%
-                                </td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-3 font-semibold" colspan="2">
-                                    Total general
-                                </td>
-                                <td class="px-4 py-3 text-right font-bold @(DistribucionValida() ? "text-emerald-300" : "text-red-300")">
-                                    @TotalGeneral().ToString("N2")%
-                                </td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                    <div class="metric-card">
+                        <p class="metric-label">Total general</p>
+                        <h3 class="metric-value @(DistribucionValida() ? "text-cyan-300" : "text-red-300")">
+                            @TotalGeneral().ToString("N2")%
+                        </h3>
+                    </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-between gap-3 mt-4">
-                    <button class="px-4 py-2 rounded-lg bg-slate-800 border border-slate-600 text-domus-text hover:bg-slate-700"
-                            @onclick="AgregarTrabajador">
-                        Agregar trabajador
+                <!-- Trabajadores -->
+                <div class="mt-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="section-title mb-1">
+                                Distribución por trabajador
+                            </h3>
+                          
+                        </div>
+
+                        <button class="btn-soft"
+                                disabled="@cargandoTrabajadores"
+                                @onclick="() => CargarTrabajadoresAutomaticamente(true)">
+                            @(cargandoTrabajadores ? "Cargando..." : "Recargar trabajadores")
+                        </button>
+                    </div>
+
+                    <div class="table-shell">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="text-left px-5 py-4">Trabajador</th>
+                                    <th class="text-left px-5 py-4">Rol</th>
+                                    <th class="text-right px-5 py-4">Porcentaje</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @if (!configuracion.Trabajadores.Any())
+                                {
+                                    <tr>
+                                        <td colspan="3" class="px-5 py-8 text-center text-slate-400">
+                                            No hay trabajadores cargados.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var trabajador in configuracion.Trabajadores)
+                                    {
+                                        <tr>
+                                            <td class="px-5 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="worker-avatar">
+                                                        @Iniciales(NombreTrabajador(trabajador.IdUsuario))
+                                                    </div>
+
+                                                    <div>
+                                                        <p class="font-bold text-white">
+                                                            @NombreTrabajador(trabajador.IdUsuario)
+                                                        </p>
+                                                        <p class="text-xs text-slate-400">
+                                                            Usuario #@trabajador.IdUsuario
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="px-5 py-4">
+                                                <span class="role-pill">
+                                                    @Texto(trabajador.TipoDistribucion, "Otro")
+                                                </span>
+                                            </td>
+
+                                            <td class="px-5 py-4 text-right">
+                                                <input type="number"
+                                                       step="0.01"
+                                                       class="input-percent"
+                                                       @bind="trabajador.Porcentaje" />
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+
+                            <tfoot>
+                                <tr>
+                                    <td class="px-5 py-4 font-bold" colspan="2">
+                                        Total trabajadores
+                                    </td>
+                                    <td class="px-5 py-4 text-right font-black">
+                                        @TotalTrabajadores().ToString("N2")%
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td class="px-5 py-4 font-bold" colspan="2">
+                                        Total general
+                                    </td>
+                                    <td class="px-5 py-4 text-right font-black @(DistribucionValida() ? "text-emerald-300" : "text-red-300")">
+                                        @TotalGeneral().ToString("N2")%
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-end gap-3 mt-5">
+                    <button class="btn-soft"
+                            disabled="@cargandoTrabajadores"
+                            @onclick="() => CargarTrabajadoresAutomaticamente(true)">
+                        Actualizar trabajadores
                     </button>
 
-                    <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
+                    <button class="btn-primary"
                             disabled="@guardandoConfiguracion"
                             @onclick="GuardarConfiguracion">
                         @(guardandoConfiguracion ? "Guardando..." : "Guardar configuración")
@@ -286,82 +366,67 @@
         <!-- Reporte cargado -->
         @if (detalle?.Resumen != null)
         {
-            <div class="rounded-xl bg-slate-900/70 border border-slate-700/60 p-5">
+            <section class="panel-card">
 
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                     <div>
-                        <h2 class="text-xl font-bold">
+                        <div class="hero-badge">
+                            Reporte generado
+                        </div>
+
+                        <h2 class="text-2xl font-black text-white mt-2">
                             Reporte #@detalle.Resumen.IdIngresoMensual
                         </h2>
-                        <p class="text-sm text-domus-text-secondary mt-1">
+
+                        <p class="text-sm text-slate-400 mt-1">
                             @NombreMes(detalle.Resumen.Mes) @detalle.Resumen.Anio ·
                             @(string.IsNullOrWhiteSpace(detalle.Resumen.Quincena) ? "Mes completo" : detalle.Resumen.Quincena) ·
                             Registrado por @Texto(detalle.Resumen.RegistradoPor, "Sin usuario")
                         </p>
                     </div>
 
-                    <button class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
+                    <button class="btn-primary"
                             disabled="@cargandoPdf"
                             @onclick="DescargarPdf">
                         @(cargandoPdf ? "Generando PDF..." : "Descargar PDF")
                     </button>
                 </div>
 
-                <!-- Resumen en tabla -->
-                <div class="overflow-x-auto rounded-lg border border-slate-700/60 mb-5">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-800/80 text-domus-text-secondary">
-                            <tr>
-                                <th class="text-left px-4 py-3">Concepto</th>
-                                <th class="text-right px-4 py-3">Porcentaje</th>
-                                <th class="text-right px-4 py-3">Monto</th>
-                            </tr>
-                        </thead>
+                <!-- Resumen -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="metric-card">
+                        <p class="metric-label">Total bruto</p>
+                        <h3 class="metric-value">@Colon(detalle.Resumen.MontoTotalBruto)</h3>
+                    </div>
 
-                        <tbody>
-                            <tr class="border-t border-slate-700/60">
-                                <td class="px-4 py-3">Total bruto</td>
-                                <td class="px-4 py-3 text-right">-</td>
-                                <td class="px-4 py-3 text-right font-semibold">@Colon(detalle.Resumen.MontoTotalBruto)</td>
-                            </tr>
+                    <div class="metric-card">
+                        <p class="metric-label">Total con rebajas</p>
+                        <h3 class="metric-value">@Colon(detalle.Resumen.MontoTotalConRebajas)</h3>
+                    </div>
 
-                            <tr class="border-t border-slate-700/60">
-                                <td class="px-4 py-3">Total con rebajas</td>
-                                <td class="px-4 py-3 text-right">
-                                    @(TotalRebajosReporte().ToString("N2"))%
-                                </td>
-                                <td class="px-4 py-3 text-right font-semibold">@Colon(detalle.Resumen.MontoTotalConRebajas)</td>
-                            </tr>
+                    <div class="metric-card">
+                        <p class="metric-label">DomusNet</p>
+                        <h3 class="metric-value text-cyan-300">@Colon(detalle.Resumen.MontoDomusNet)</h3>
+                    </div>
 
-                            <tr class="border-t border-slate-700/60">
-                                <td class="px-4 py-3">DomusNet</td>
-                                <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeDomusNet.ToString("N2")%</td>
-                                <td class="px-4 py-3 text-right font-semibold text-cyan-300">@Colon(detalle.Resumen.MontoDomusNet)</td>
-                            </tr>
-
-                            <tr class="border-t border-slate-700/60">
-                                <td class="px-4 py-3">Trabajadores</td>
-                                <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeTrabajadores.ToString("N2")%</td>
-                                <td class="px-4 py-3 text-right font-semibold text-emerald-300">@Colon(detalle.Resumen.MontoTrabajadores)</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="metric-card">
+                        <p class="metric-label">Trabajadores</p>
+                        <h3 class="metric-value text-emerald-300">@Colon(detalle.Resumen.MontoTrabajadores)</h3>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                     <!-- Totales por tipo -->
                     <div>
-                        <h3 class="font-bold mb-3">
-                            Totales por tipo
-                        </h3>
+                        <h3 class="section-title">Totales por tipo</h3>
 
-                        <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                        <div class="table-shell">
                             <table class="w-full text-sm">
-                                <thead class="bg-slate-800/80 text-domus-text-secondary">
+                                <thead>
                                     <tr>
-                                        <th class="text-left px-4 py-3">Tipo</th>
-                                        <th class="text-right px-4 py-3">Total asignado</th>
+                                        <th class="text-left px-5 py-4">Tipo</th>
+                                        <th class="text-right px-5 py-4">Total asignado</th>
                                     </tr>
                                 </thead>
 
@@ -369,7 +434,7 @@
                                     @if (!detalle.TotalesPorTipo.Any())
                                     {
                                         <tr>
-                                            <td colspan="2" class="px-4 py-4 text-center text-domus-text-secondary">
+                                            <td colspan="2" class="px-5 py-6 text-center text-slate-400">
                                                 No hay datos.
                                             </td>
                                         </tr>
@@ -378,9 +443,9 @@
                                     {
                                         @foreach (var tipo in detalle.TotalesPorTipo)
                                         {
-                                            <tr class="border-t border-slate-700/60">
-                                                <td class="px-4 py-3">@Texto(tipo.TipoDistribucion, "Otro")</td>
-                                                <td class="px-4 py-3 text-right font-semibold">@Colon(tipo.TotalAsignado)</td>
+                                            <tr>
+                                                <td class="px-5 py-4">@Texto(tipo.TipoDistribucion, "Otro")</td>
+                                                <td class="px-5 py-4 text-right font-bold">@Colon(tipo.TotalAsignado)</td>
                                             </tr>
                                         }
                                     }
@@ -391,33 +456,38 @@
 
                     <!-- Rebajos -->
                     <div>
-                        <h3 class="font-bold mb-3">
-                            Rebajos aplicados
-                        </h3>
+                        <h3 class="section-title">Rebajos aplicados</h3>
 
-                        <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                        <div class="table-shell">
                             <table class="w-full text-sm">
-                                <thead class="bg-slate-800/80 text-domus-text-secondary">
+                                <thead>
                                     <tr>
-                                        <th class="text-left px-4 py-3">Rebajo</th>
-                                        <th class="text-right px-4 py-3">Porcentaje</th>
+                                        <th class="text-left px-5 py-4">Rebajo</th>
+                                        <th class="text-right px-5 py-4">Porcentaje</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    <tr class="border-t border-slate-700/60">
-                                        <td class="px-4 py-3">IVA</td>
-                                        <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeIVA.ToString("N2")%</td>
+                                    <tr>
+                                        <td class="px-5 py-4">IVA</td>
+                                        <td class="px-5 py-4 text-right">@detalle.Resumen.PorcentajeIVA.ToString("N2")%</td>
                                     </tr>
 
-                                    <tr class="border-t border-slate-700/60">
-                                        <td class="px-4 py-3">Cruz Roja</td>
-                                        <td class="px-4 py-3 text-right">@detalle.Resumen.PorcentajeCruzRoja.ToString("N2")%</td>
+                                    <tr>
+                                        <td class="px-5 py-4">Cruz Roja</td>
+                                        <td class="px-5 py-4 text-right">@detalle.Resumen.PorcentajeCruzRoja.ToString("N2")%</td>
                                     </tr>
 
-                                    <tr class="border-t border-slate-700/60">
-                                        <td class="px-4 py-3">911</td>
-                                        <td class="px-4 py-3 text-right">@detalle.Resumen.Porcentaje911.ToString("N2")%</td>
+                                    <tr>
+                                        <td class="px-5 py-4">911</td>
+                                        <td class="px-5 py-4 text-right">@detalle.Resumen.Porcentaje911.ToString("N2")%</td>
+                                    </tr>
+
+                                    <tr>
+                                        <td class="px-5 py-4 font-bold">Total rebajos</td>
+                                        <td class="px-5 py-4 text-right font-black">
+                                            @TotalRebajosReporte().ToString("N2")%
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -425,39 +495,41 @@
                     </div>
                 </div>
 
-                <!-- Distribución trabajadores -->
-                <div class="mt-5">
-                    <h3 class="font-bold mb-3">
-                        Distribución por trabajador
-                    </h3>
+                <!-- Distribución generada -->
+                <div class="mt-6">
+                    <h3 class="section-title">Distribución generada</h3>
 
-                    <div class="overflow-x-auto rounded-lg border border-slate-700/60">
+                    <div class="table-shell">
                         <table class="w-full text-sm">
-                            <thead class="bg-slate-800/80 text-domus-text-secondary">
+                            <thead>
                                 <tr>
-                                    <th class="text-left px-4 py-3">Trabajador</th>
-                                    <th class="text-left px-4 py-3">Tipo</th>
-                                    <th class="text-right px-4 py-3">Porcentaje</th>
-                                    <th class="text-right px-4 py-3">Monto</th>
+                                    <th class="text-left px-5 py-4">Trabajador</th>
+                                    <th class="text-left px-5 py-4">Tipo</th>
+                                    <th class="text-right px-5 py-4">Porcentaje</th>
+                                    <th class="text-right px-5 py-4">Monto</th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 @foreach (var item in detalle.Distribuciones)
                                 {
-                                    <tr class="border-t border-slate-700/60 hover:bg-slate-800/40">
-                                        <td class="px-4 py-3">
-                                            <span class="font-semibold">@Texto(item.Trabajador, "Sin nombre")</span>
-                                            <span class="text-xs text-domus-text-secondary ml-1">#@item.IdUsuario</span>
+                                    <tr>
+                                        <td class="px-5 py-4">
+                                            <span class="font-bold text-white">@Texto(item.Trabajador, "Sin nombre")</span>
+                                            <span class="text-xs text-slate-400 ml-1">#@item.IdUsuario</span>
                                         </td>
 
-                                        <td class="px-4 py-3">@Texto(item.TipoDistribucion, "Otro")</td>
+                                        <td class="px-5 py-4">
+                                            <span class="role-pill">
+                                                @Texto(item.TipoDistribucion, "Otro")
+                                            </span>
+                                        </td>
 
-                                        <td class="px-4 py-3 text-right">
+                                        <td class="px-5 py-4 text-right">
                                             @item.PorcentajeAplicado.ToString("N2")%
                                         </td>
 
-                                        <td class="px-4 py-3 text-right font-semibold">
+                                        <td class="px-5 py-4 text-right font-black">
                                             @Colon(item.MontoAsignado)
                                         </td>
                                     </tr>
@@ -469,16 +541,14 @@
 
                 @if (!string.IsNullOrWhiteSpace(detalle.Resumen.Notas))
                 {
-                    <div class="mt-5 rounded-lg bg-slate-800/50 border border-slate-700/60 p-4">
-                        <p class="text-xs text-domus-text-secondary mb-1">
-                            Notas
-                        </p>
-                        <p class="text-sm">
+                    <div class="notes-box mt-6">
+                        <p class="text-xs text-slate-400 mb-1">Notas</p>
+                        <p class="text-sm text-slate-100">
                             @detalle.Resumen.Notas
                         </p>
                     </div>
                 }
-            </div>
+            </section>
         }
     </div>
 </div>
@@ -491,14 +561,17 @@
     private bool generandoReporte;
     private bool consultandoReporte;
     private bool cargandoPdf;
+    private bool cargandoTrabajadores;
 
     private int idUsuarioActual = 1;
     private int idReporteConsulta = 1;
 
+    private List<TrabajadorUsuarioResponse> trabajadoresDisponibles = new();
+
     private string ClaseMensaje =>
         mensajeEsError
-            ? "rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-200 text-sm"
-            : "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-cyan-200 text-sm";
+            ? "rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-red-200 text-sm"
+            : "rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-4 text-cyan-200 text-sm";
 
     private GuardarConfiguracionDistribucionRequest configuracion = new()
     {
@@ -508,14 +581,6 @@
         PorcentajeCruzRoja = 1,
         Porcentaje911 = 0.75m,
         Trabajadores = new()
-        {
-            new TrabajadorDistribucionRequest { IdUsuario = 1, TipoDistribucion = "Administrador", Porcentaje = 5 },
-            new TrabajadorDistribucionRequest { IdUsuario = 2, TipoDistribucion = "Administrador", Porcentaje = 5 },
-            new TrabajadorDistribucionRequest { IdUsuario = 3, TipoDistribucion = "Vendedor", Porcentaje = 5 },
-            new TrabajadorDistribucionRequest { IdUsuario = 4, TipoDistribucion = "Vendedor", Porcentaje = 5 },
-            new TrabajadorDistribucionRequest { IdUsuario = 5, TipoDistribucion = "Tecnico", Porcentaje = 5 },
-            new TrabajadorDistribucionRequest { IdUsuario = 6, TipoDistribucion = "Tecnico", Porcentaje = 5 }
-        }
     };
 
     private GenerarReporteIngresosRequest generar = new()
@@ -547,6 +612,82 @@
 
         configuracion.IdCreadoPor = idUsuarioActual;
         generar.IdRegistradoPor = idUsuarioActual;
+
+        await CargarTrabajadoresAutomaticamente(false);
+    }
+
+    private async Task CargarTrabajadoresAutomaticamente(bool mostrarMensaje = true)
+    {
+        cargandoTrabajadores = true;
+
+        if (mostrarMensaje)
+        {
+            mensaje = null;
+        }
+
+        try
+        {
+            trabajadoresDisponibles = await ReportesService.ListarTrabajadoresAsync();
+
+            configuracion.Trabajadores.Clear();
+
+            if (!trabajadoresDisponibles.Any())
+            {
+                MostrarMensaje("No se encontraron trabajadores registrados.", true);
+                return;
+            }
+
+            var porcentajeTrabajadores = 100 - configuracion.PorcentajeDomusNet;
+
+            if (porcentajeTrabajadores < 0)
+            {
+                MostrarMensaje("El porcentaje de DomusNet no puede ser mayor a 100%.", true);
+                return;
+            }
+
+            var porcentajePorTrabajador = Math.Round(
+                porcentajeTrabajadores / trabajadoresDisponibles.Count,
+                2
+            );
+
+            foreach (var trabajador in trabajadoresDisponibles)
+            {
+                configuracion.Trabajadores.Add(new TrabajadorDistribucionRequest
+                {
+                    IdUsuario = trabajador.IdUsuario,
+                    TipoDistribucion = NormalizarRol(trabajador.Rol),
+                    Porcentaje = porcentajePorTrabajador
+                });
+            }
+
+            AjustarDiferenciaPorRedondeo();
+
+            if (mostrarMensaje)
+            {
+                MostrarMensaje("Trabajadores actualizados correctamente.", false);
+            }
+        }
+        catch
+        {
+            MostrarMensaje("No se pudieron cargar los trabajadores.", true);
+        }
+        finally
+        {
+            cargandoTrabajadores = false;
+        }
+    }
+
+    private void AjustarDiferenciaPorRedondeo()
+    {
+        if (!configuracion.Trabajadores.Any())
+        {
+            return;
+        }
+
+        var porcentajeEsperado = 100 - configuracion.PorcentajeDomusNet;
+        var diferencia = porcentajeEsperado - TotalTrabajadores();
+
+        configuracion.Trabajadores[^1].Porcentaje += diferencia;
     }
 
     private decimal TotalTrabajadores()
@@ -576,23 +717,15 @@
                detalle.Resumen.Porcentaje911;
     }
 
-    private void AgregarTrabajador()
-    {
-        configuracion.Trabajadores.Add(new TrabajadorDistribucionRequest
-        {
-            TipoDistribucion = "Otro",
-            Porcentaje = 0
-        });
-    }
-
-    private void QuitarTrabajador(TrabajadorDistribucionRequest trabajador)
-    {
-        configuracion.Trabajadores.Remove(trabajador);
-    }
-
     private async Task GuardarConfiguracion()
     {
         mensaje = null;
+
+        if (!configuracion.Trabajadores.Any())
+        {
+            MostrarMensaje("Primero cargá los trabajadores registrados.", true);
+            return;
+        }
 
         if (!DistribucionValida())
         {
@@ -622,7 +755,6 @@
     private async Task GenerarReporte()
     {
         mensaje = null;
-
         generandoReporte = true;
 
         try
@@ -656,7 +788,6 @@
     private async Task ConsultarReporte()
     {
         mensaje = null;
-
         consultandoReporte = true;
 
         try
@@ -756,40 +887,402 @@
             _ => $"Mes {mes}"
         };
     }
+
+    private string NormalizarRol(string? rol)
+    {
+        return rol?.Trim().ToLower() switch
+        {
+            "administrador" => "Administrador",
+            "vendedor" => "Vendedor",
+            "tecnico" => "Tecnico",
+            "técnico" => "Tecnico",
+            _ => "Otro"
+        };
+    }
+
+    private string NombreTrabajador(int idUsuario)
+    {
+        var trabajador = trabajadoresDisponibles
+            .FirstOrDefault(t => t.IdUsuario == idUsuario);
+
+        return trabajador == null
+            ? $"Usuario #{idUsuario}"
+            : trabajador.Nombre;
+    }
+
+    private string Iniciales(string nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            return "U";
+        }
+
+        var partes = nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (partes.Length == 1)
+        {
+            return partes[0][0].ToString().ToUpper();
+        }
+
+        return $"{partes[0][0]}{partes[1][0]}".ToUpper();
+    }
 }
 
 <style>
+    .reportes-page {
+        background:
+            radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 32rem),
+            radial-gradient(circle at top right, rgba(16, 185, 129, 0.10), transparent 30rem),
+            #020617;
+    }
+
+    .hero-reportes {
+        border: 1px solid rgba(51, 65, 85, 0.75);
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.75)),
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.18), transparent 22rem);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    }
+
+    @@media (min-width: 768px) {
+        .hero-reportes {
+            flex-direction: row;
+            align-items: center;
+            padding: 1.75rem;
+        }
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        width: fit-content;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.28);
+        background: rgba(34, 211, 238, 0.08);
+        color: #a5f3fc;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        line-height: 1.1;
+        font-weight: 950;
+        color: #f8fafc;
+        margin: 0;
+    }
+
+    .hero-subtitle {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        margin-top: 0.5rem;
+        max-width: 42rem;
+    }
+
+    .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .panel-card {
+        border: 1px solid rgba(51, 65, 85, 0.78);
+        background:
+            linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.72));
+        border-radius: 1.35rem;
+        padding: 1.25rem;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.20);
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .panel-title {
+        color: #f8fafc;
+        font-weight: 900;
+        font-size: 1.15rem;
+        margin: 0;
+    }
+
+    .panel-description {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    .section-title {
+        color: #f8fafc;
+        font-weight: 900;
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .label-admin {
+        display: block;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
+    }
+
     .input-admin {
         width: 100%;
-        border-radius: 0.5rem;
-        border: 1px solid rgba(51, 65, 85, 0.9);
-        background: rgba(15, 23, 42, 0.85);
-        padding: 0.65rem 0.75rem;
+        border-radius: 0.85rem;
+        border: 1px solid rgba(51, 65, 85, 0.95);
+        background: rgba(2, 6, 23, 0.50);
+        padding: 0.72rem 0.85rem;
         color: #f8fafc;
         outline: none;
         font-size: 0.9rem;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
 
     .input-admin:focus {
-        border-color: rgba(34, 211, 238, 0.7);
+        border-color: rgba(34, 211, 238, 0.75);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.10);
+        background: rgba(2, 6, 23, 0.72);
     }
 
-    .input-table {
-        width: 100%;
-        border-radius: 0.375rem;
-        border: 1px solid rgba(51, 65, 85, 0.9);
-        background: rgba(15, 23, 42, 0.7);
-        padding: 0.45rem 0.55rem;
+    .btn-primary,
+    .btn-success,
+    .btn-soft {
+        border: 0;
+        border-radius: 999px;
+        font-weight: 900;
+        padding: 0.75rem 1.1rem;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #22d3ee, #14b8a6);
+        color: #020617;
+        box-shadow: 0 18px 40px rgba(34, 211, 238, 0.18);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #34d399, #10b981);
+        color: #022c22;
+        box-shadow: 0 18px 40px rgba(16, 185, 129, 0.18);
+    }
+
+    .btn-soft {
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.92);
+        color: #e2e8f0;
+    }
+
+    .btn-primary:hover,
+    .btn-success:hover,
+    .btn-soft:hover {
+        transform: translateY(-1px);
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 20px 48px rgba(34, 211, 238, 0.28);
+    }
+
+    .btn-success:hover {
+        box-shadow: 0 20px 48px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-soft:hover {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(34, 211, 238, 0.45);
+    }
+
+    .btn-primary:disabled,
+    .btn-success:disabled,
+    .btn-soft:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 0.32rem 0.7rem;
+        font-size: 0.72rem;
+        font-weight: 900;
+    }
+
+    .status-pill.success {
+        background: rgba(16, 185, 129, 0.10);
+        color: #86efac;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .mini-info {
+        border: 1px solid rgba(51, 65, 85, 0.75);
+        background: rgba(2, 6, 23, 0.36);
+        border-radius: 1rem;
+        padding: 1rem;
+    }
+
+    .summary-header {
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        list-style: none;
+        padding-bottom: 1.25rem;
+    }
+
+    .summary-header::-webkit-details-marker {
+        display: none;
+    }
+
+    @@media (min-width: 768px) {
+        .summary-header {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+    }
+
+    .summary-totals {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .summary-totals span {
+        border-radius: 999px;
+        background: rgba(34, 211, 238, 0.08);
+        border: 1px solid rgba(34, 211, 238, 0.20);
+        color: #bae6fd;
+        padding: 0.38rem 0.7rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .summary-totals span.ok {
+        background: rgba(16, 185, 129, 0.10);
+        border-color: rgba(16, 185, 129, 0.25);
+        color: #86efac;
+    }
+
+    .summary-totals span.bad {
+        background: rgba(239, 68, 68, 0.10);
+        border-color: rgba(239, 68, 68, 0.25);
+        color: #fca5a5;
+    }
+
+    .metric-card {
+        border: 1px solid rgba(51, 65, 85, 0.78);
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.10), transparent 35%),
+            rgba(2, 6, 23, 0.36);
+        border-radius: 1.15rem;
+        padding: 1rem;
+    }
+
+    .metric-label {
+        color: #94a3b8;
+        font-size: 0.76rem;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
+    }
+
+    .metric-value {
+        font-size: 1.25rem;
+        font-weight: 950;
+        color: #f8fafc;
+    }
+
+    .table-shell {
+        overflow-x: auto;
+        border-radius: 1rem;
+        border: 1px solid rgba(51, 65, 85, 0.78);
+        background: rgba(2, 6, 23, 0.32);
+    }
+
+    .table-shell thead {
+        background: rgba(15, 23, 42, 0.95);
+        color: #cbd5e1;
+        font-weight: 800;
+    }
+
+    .table-shell tbody tr,
+    .table-shell tfoot tr {
+        border-top: 1px solid rgba(51, 65, 85, 0.65);
+        color: #e2e8f0;
+    }
+
+    .table-shell tbody tr {
+        transition: background 0.16s ease;
+    }
+
+    .table-shell tbody tr:hover {
+        background: rgba(15, 23, 42, 0.72);
+    }
+
+    .table-shell tfoot {
+        background: rgba(15, 23, 42, 0.72);
+        color: #f8fafc;
+    }
+
+    .worker-avatar {
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #22d3ee, #10b981);
+        color: #020617;
+        font-weight: 950;
+        font-size: 0.82rem;
+        flex: 0 0 auto;
+    }
+
+    .role-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 211, 238, 0.24);
+        background: rgba(34, 211, 238, 0.08);
+        color: #a5f3fc;
+        padding: 0.32rem 0.7rem;
+        font-size: 0.76rem;
+        font-weight: 800;
+    }
+
+    .input-percent {
+        width: 7.5rem;
+        border-radius: 999px;
+        border: 1px solid rgba(51, 65, 85, 0.95);
+        background: rgba(2, 6, 23, 0.58);
+        padding: 0.55rem 0.75rem;
         color: #f8fafc;
         outline: none;
-        font-size: 0.85rem;
+        text-align: right;
+        font-weight: 850;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
     }
 
-    .input-table:focus {
-        border-color: rgba(34, 211, 238, 0.7);
+    .input-percent:focus {
+        border-color: rgba(34, 211, 238, 0.75);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.10);
     }
 
-    summary::marker {
-        color: #22d3ee;
+    .notes-box {
+        border: 1px solid rgba(51, 65, 85, 0.78);
+        background: rgba(2, 6, 23, 0.40);
+        border-radius: 1rem;
+        padding: 1rem;
     }
 </style>

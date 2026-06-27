@@ -236,7 +236,11 @@ BEGIN
             @MontoDomusNet DECIMAL(10,2),
             @MontoTrabajadores DECIMAL(10,2),
             @IdIngresoMensual INT,
-            @PorcentajeRebajas DECIMAL(5,2);
+            @PorcentajeRebajas DECIMAL(5,2),
+            @FechaInicio DATE,
+            @FechaFin DATE;
+
+        SET @Quincena = NULLIF(LTRIM(RTRIM(@Quincena)), '');
 
         IF @Mes < 1 OR @Mes > 12
         BEGIN
@@ -244,6 +248,9 @@ BEGIN
             SELECT -1 AS Resultado, 'El mes no es válido.' AS Mensaje, 0 AS IdGenerado;
             RETURN;
         END
+
+        SET @FechaInicio = DATEFROMPARTS(@Anio, @Mes, 1);
+        SET @FechaFin = DATEADD(MONTH, 1, @FechaInicio);
 
         IF NOT EXISTS (
             SELECT 1
@@ -278,15 +285,25 @@ BEGIN
         SELECT
             @MontoTotalBruto = SUM(Monto)
         FROM dbo.Ingresos
-        WHERE Estado = 'Confirmado'
-          AND MONTH(Fecha) = @Mes
-          AND YEAR(Fecha) = @Anio
-          AND (@Quincena IS NULL OR Quincena = @Quincena);
+        WHERE LOWER(LTRIM(RTRIM(Estado))) IN ('registrado', 'registrada')
+          AND Fecha >= @FechaInicio
+          AND Fecha < @FechaFin
+          AND (
+                @Quincena IS NULL
+                OR (
+                    LOWER(@Quincena) = 'primera'
+                    AND DAY(Fecha) BETWEEN 1 AND 15
+                )
+                OR (
+                    LOWER(@Quincena) = 'segunda'
+                    AND DAY(Fecha) >= 16
+                )
+              );
 
         IF @MontoTotalBruto IS NULL OR @MontoTotalBruto <= 0
         BEGIN
             ROLLBACK TRANSACTION;
-            SELECT -4 AS Resultado, 'No hay ingresos confirmados para ese periodo.' AS Mensaje, 0 AS IdGenerado;
+            SELECT -4 AS Resultado, 'No hay ingresos registrados para ese periodo.' AS Mensaje, 0 AS IdGenerado;
             RETURN;
         END
 
@@ -305,11 +322,14 @@ BEGIN
 
         SET @PorcentajeRebajas = @PorcentajeIVA + @PorcentajeCruzRoja + @Porcentaje911;
 
-        SET @MontoTotalConRebajas = @MontoTotalBruto - ((@MontoTotalBruto * @PorcentajeRebajas) / 100);
+        SET @MontoTotalConRebajas =
+            @MontoTotalBruto - ((@MontoTotalBruto * @PorcentajeRebajas) / 100);
 
-        SET @MontoDomusNet = (@MontoTotalConRebajas * @PorcentajeDomusNet) / 100;
+        SET @MontoDomusNet =
+            (@MontoTotalConRebajas * @PorcentajeDomusNet) / 100;
 
-        SET @MontoTrabajadores = (@MontoTotalConRebajas * @PorcentajeTrabajadores) / 100;
+        SET @MontoTrabajadores =
+            (@MontoTotalConRebajas * @PorcentajeTrabajadores) / 100;
 
         INSERT INTO dbo.IngresosMensuales (
             Mes,
@@ -382,6 +402,8 @@ BEGIN
     END CATCH
 END;
 GO
+
+
 
 --Registrar ingresos manuales
 CREATE OR ALTER PROCEDURE dbo.registrarIngresoManual
@@ -553,6 +575,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    -- 1. Resumen general
     SELECT
         im.IdIngresoMensual,
         im.Mes,
@@ -571,24 +594,39 @@ BEGIN
         im.FechaRegistro,
         u.Nombre AS RegistradoPor
     FROM dbo.IngresosMensuales im
-    INNER JOIN dbo.Usuarios u
+    LEFT JOIN dbo.Usuarios u
         ON im.IdRegistradoPor = u.IdUsuario
     WHERE im.IdIngresoMensual = @IdIngresoMensual;
 
+    -- 2. Totales por tipo
     SELECT
-        d.IdDistribucion,
-        d.IdIngresoMensual,
-        d.IdUsuario,
-        u.Nombre AS Trabajador,
-        d.PorcentajeAplicado,
-        d.MontoAsignado
-    FROM dbo.DistribucionIngresosMensuales d
+        r.NombreRol AS TipoDistribucion,
+        SUM(dim.MontoAsignado) AS TotalAsignado
+    FROM dbo.DistribucionIngresosMensuales dim
     INNER JOIN dbo.Usuarios u
-        ON d.IdUsuario = u.IdUsuario
-    WHERE d.IdIngresoMensual = @IdIngresoMensual;
+        ON dim.IdUsuario = u.IdUsuario
+    INNER JOIN dbo.Roles r
+        ON u.IdRol = r.IdRol
+    WHERE dim.IdIngresoMensual = @IdIngresoMensual
+    GROUP BY r.NombreRol
+    ORDER BY r.NombreRol;
+
+    -- 3. Distribución por trabajador
+    SELECT
+        dim.IdUsuario,
+        u.Nombre AS Trabajador,
+        r.NombreRol AS TipoDistribucion,
+        dim.PorcentajeAplicado,
+        dim.MontoAsignado
+    FROM dbo.DistribucionIngresosMensuales dim
+    INNER JOIN dbo.Usuarios u
+        ON dim.IdUsuario = u.IdUsuario
+    INNER JOIN dbo.Roles r
+        ON u.IdRol = r.IdRol
+    WHERE dim.IdIngresoMensual = @IdIngresoMensual
+    ORDER BY r.NombreRol, u.Nombre;
 END;
 GO
-
 SELECT * FROM dbo.DistribucionIngresosMensuales
 SELECT * FROM dbo.ConfiguracionDistribucionTrabajadores
 SELECT * FROM dbo.ConfiguracionDistribucionIngresos

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using DomusNet.Blazor.Models;
+using DomusNet.Shared.DTOs;
 
 namespace DomusNet.Blazor.Services;
 
@@ -77,4 +78,21 @@ public class ReportesService
 
     return await response.Content.ReadAsByteArrayAsync();
 }
+    public async Task<List<TrabajadorUsuarioResponse>> ListarTrabajadoresAsync()
+    {
+        await AgregarTokenAsync();
+
+        var response = await _http.GetAsync("api/Reportes/trabajadores");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"No se pudieron cargar los trabajadores. Código: {(int)response.StatusCode} {response.ReasonPhrase}"
+            );
+        }
+
+        var resultado = await response.Content.ReadFromJsonAsync<List<TrabajadorUsuarioResponse>>();
+
+        return resultado ?? new List<TrabajadorUsuarioResponse>();
+    }
 }

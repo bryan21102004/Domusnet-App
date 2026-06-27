@@ -4,6 +4,7 @@ using Dapper;
 using DomusNet.API.Data;
 using DomusNet.API.Models;
 using DomusNet.API.Repositories.Interfaces;
+using DomusNet.Shared.DTOs;
 
 namespace DomusNet.API.Repositories;
 
@@ -81,16 +82,25 @@ public async Task<DetalleReporteIngresoResponse?> ObtenerDetalleReporteIngresoAs
         return null;
     }
 
-    var distribuciones = await multi.ReadAsync<DistribucionIngresoDetalle>();
-
     var totalesPorTipo = await multi.ReadAsync<DistribucionPorTipoResumen>();
+
+    var distribuciones = await multi.ReadAsync<DistribucionIngresoDetalle>();
 
     return new DetalleReporteIngresoResponse
     {
         Resumen = resumen,
-        Distribuciones = distribuciones,
-        TotalesPorTipo = totalesPorTipo
+        TotalesPorTipo = totalesPorTipo,
+        Distribuciones = distribuciones
     };
+}
+public async Task<IEnumerable<TrabajadorUsuarioResponse>> ListarTrabajadoresAsync()
+{
+    using var connection = _context.CreateConnection();
+
+    return await connection.QueryAsync<TrabajadorUsuarioResponse>(
+        "dbo.listarTrabajadoresDistribucion",
+        commandType: CommandType.StoredProcedure
+    );
 }
   
 }

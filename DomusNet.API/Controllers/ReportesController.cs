@@ -7,82 +7,161 @@ namespace DomusNet.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Administrador")]
+
 public class ReportesController : ControllerBase
 {
     private readonly IReportesService _reportesService;
     private readonly IReportePdfService _reportePdfService;
 
-    
     public ReportesController(
-    IReportesService reportesService,
-    IReportePdfService reportePdfService)
-{
-    _reportesService = reportesService;
-    _reportePdfService = reportePdfService;
-}
+        IReportesService reportesService,
+        IReportePdfService reportePdfService)
+    {
+        _reportesService = reportesService;
+        _reportePdfService = reportePdfService;
+    }
 
     [HttpPost("configuracion-distribucion")]
+    [Authorize(Roles = "Administrador")]
+
     public async Task<IActionResult> GuardarConfiguracionDistribucion(
         [FromBody] GuardarConfiguracionDistribucionRequest request)
     {
-        var resultado = await _reportesService.GuardarConfiguracionDistribucionAsync(request);
-
-        if (resultado.Resultado == 1)
+        try
         {
-            return Ok(resultado);
-        }
+            var resultado = await _reportesService.GuardarConfiguracionDistribucionAsync(request);
 
-        return BadRequest(resultado);
+            if (resultado.Resultado == 1)
+            {
+                return Ok(resultado);
+            }
+
+            return BadRequest(resultado);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = "Error guardando la configuración de distribución.",
+                error = ex.Message,
+                detalle = ex.InnerException?.Message,
+                stack = ex.StackTrace
+            });
+        }
     }
 
     [HttpPost("generar-ingresos")]
+    [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> GenerarReporteIngresos(
         [FromBody] GenerarReporteIngresosRequest request)
     {
-        var resultado = await _reportesService.GenerarReporteIngresosAsync(request);
-
-        if (resultado.Resultado == 1)
+        try
         {
-            return Ok(resultado);
-        }
+            var resultado = await _reportesService.GenerarReporteIngresosAsync(request);
 
-        return BadRequest(resultado);
+            if (resultado.Resultado == 1)
+            {
+                return Ok(resultado);
+            }
+
+            return BadRequest(resultado);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = "Error generando el reporte de ingresos.",
+                error = ex.Message,
+                detalle = ex.InnerException?.Message,
+                stack = ex.StackTrace
+            });
+        }
     }
 
     [HttpGet("ingresos-generados/{idIngresoMensual}")]
+    [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> ObtenerDetalleReporteIngreso(int idIngresoMensual)
     {
-        var reporte = await _reportesService.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
-
-        if (reporte == null)
+        try
         {
-            return NotFound(new
+            var reporte = await _reportesService.ObtenerDetalleReporteIngresoAsync(idIngresoMensual);
+
+            if (reporte == null)
             {
-                mensaje = "No se encontró el reporte de ingresos."
+                return NotFound(new
+                {
+                    mensaje = $"No se encontró el reporte de ingresos #{idIngresoMensual}."
+                });
+            }
+
+            return Ok(reporte);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = "Error consultando el detalle del reporte.",
+                idIngresoMensual,
+                error = ex.Message,
+                detalle = ex.InnerException?.Message,
+                stack = ex.StackTrace
             });
         }
-
-        return Ok(reporte);
     }
 
     [HttpGet("ingresos-generados/{idIngresoMensual}/pdf")]
-public async Task<IActionResult> DescargarReporteIngresoPdf(int idIngresoMensual)
-{
-    var resultado = await _reportePdfService.GenerarReporteIngresosPdfAsync(idIngresoMensual);
-
-    if (resultado == null)
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> DescargarReporteIngresoPdf(int idIngresoMensual)
     {
-        return NotFound(new
+        try
         {
-            mensaje = "No se encontró el reporte de ingresos."
-        });
-    }
+            var resultado = await _reportePdfService.GenerarReporteIngresosPdfAsync(idIngresoMensual);
 
-    return File(
-        resultado.Archivo,
-        "application/pdf",
-        resultado.NombreArchivo
-    );
-}
+            if (resultado == null)
+            {
+                return NotFound(new
+                {
+                    mensaje = $"No se encontró el reporte de ingresos #{idIngresoMensual}."
+                });
+            }
+
+            return File(
+                resultado.Archivo,
+                "application/pdf",
+                resultado.NombreArchivo
+            );
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = "Error generando el PDF del reporte.",
+                idIngresoMensual,
+                error = ex.Message,
+                detalle = ex.InnerException?.Message,
+                stack = ex.StackTrace
+            });
+        }
+    }
+ 
+    [HttpGet("trabajadores")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> ListarTrabajadores()
+    {
+        try
+        {
+            var trabajadores = await _reportesService.ListarTrabajadoresAsync();
+            return Ok(trabajadores);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new
+            {
+                mensaje = "Error listando trabajadores para distribución.",
+                error = ex.Message,
+                detalle = ex.InnerException?.Message,
+                stack = ex.StackTrace
+            });
+        }
+    }
 }
