@@ -1,6 +1,7 @@
 @page "/acceso-interno"
 @using DomusNet.Blazor.Models
 @using DomusNet.Blazor.Services
+@using DomusNet.Blazor.Helpers
 @inject AuthFrontendService AuthService
 @inject NavigationManager Navigation
 
@@ -70,17 +71,33 @@ private string mensaje = "";
 private bool cargando = false;
 
 
-private async Task IniciarSesionAsync(){
-    mensaje = String.Empty;
+private async Task IniciarSesionAsync()
+{
+    mensaje = string.Empty;
 
-    if(string.IsNullOrWhiteSpace(login.Correo) ||
-       string.IsNullOrWhiteSpace(login.Password))
-       {
+    if (string.IsNullOrWhiteSpace(login.Correo))
+    {
+        mensaje = "Debe ingresar su correo electrónico.";
+        return;
+    }
 
-mensaje = "Debe de ingresar su correo y contraseña";
- return;
-}
-cargando =true;
+    var correoVal = ValidacionesFormularioUsuario.ValidarCorreo(login.Correo);
+    if (!correoVal.Valido)
+    {
+        mensaje = correoVal.Mensaje;
+        return;
+    }
+
+    var passwordTrim = login.Password?.Trim() ?? string.Empty;
+    if (string.IsNullOrEmpty(passwordTrim))
+    {
+        mensaje = "Debe ingresar su contraseña.";
+        return;
+    }
+
+    login.Correo   = login.Correo.Trim();
+    login.Password = passwordTrim;
+    cargando = true;
     try
         {
             var resultado = await AuthService.LoginAsync(login);

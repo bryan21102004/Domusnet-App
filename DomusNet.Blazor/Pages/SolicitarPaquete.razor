@@ -1,6 +1,7 @@
 @page "/solicitar-paquete/{IdPaquete:int}"
 @using DomusNet.Blazor.Models
 @using DomusNet.Blazor.Services
+@using DomusNet.Blazor.Helpers
 @inject PaquetesFrontendService PaquetesService
 @inject SolicitudesPublicasService SolicitudesService
 @inject NavigationManager Navigation
@@ -81,8 +82,13 @@
                         </label>
                         <input type="text"
                                @bind="solicitud.NombreCompleto"
+                               @bind:event="oninput"
                                placeholder="Ingrese su nombre completo"
-                               class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                               class="@ClaseInput(errNombre)" />
+                        @if (!string.IsNullOrWhiteSpace(errNombre))
+                        {
+                            <p class="text-xs text-red-300 mt-1.5">@errNombre</p>
+                        }
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -90,10 +96,15 @@
                             <label class="block text-sm font-medium text-domus-text mb-1.5">
                                 Teléfono
                             </label>
-                            <input type="text"
+                            <input type="tel"
                                    @bind="solicitud.Telefono"
-                                   placeholder="Ej: 88888888"
-                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                                   @bind:event="oninput"
+                                   placeholder="Ej: 8888-8888"
+                                   class="@ClaseInput(errTelefono)" />
+                            @if (!string.IsNullOrWhiteSpace(errTelefono))
+                            {
+                                <p class="text-xs text-red-300 mt-1.5">@errTelefono</p>
+                            }
                         </div>
 
                         <div>
@@ -102,8 +113,13 @@
                             </label>
                             <input type="email"
                                    @bind="solicitud.Correo"
+                                   @bind:event="oninput"
                                    placeholder="correo@gmail.com"
-                                   class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors" />
+                                   class="@ClaseInput(errCorreo)" />
+                            @if (!string.IsNullOrWhiteSpace(errCorreo))
+                            {
+                                <p class="text-xs text-red-300 mt-1.5">@errCorreo</p>
+                            }
                         </div>
                     </div>
 
@@ -112,9 +128,14 @@
                             Dirección
                         </label>
                         <textarea @bind="solicitud.Direccion"
+                                  @bind:event="oninput"
                                   placeholder="Ingrese la dirección donde se instalará el servicio"
                                   rows="3"
-                                  class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan focus:ring-1 focus:ring-domus-cyan/30 transition-colors"></textarea>
+                                  class="@ClaseInput(errDireccion)"></textarea>
+                        @if (!string.IsNullOrWhiteSpace(errDireccion))
+                        {
+                            <p class="text-xs text-red-300 mt-1.5">@errDireccion</p>
+                        }
                     </div>
 
                     <div>
@@ -150,8 +171,11 @@
     private bool cargandoPaquete = true;
     private bool enviando = false;
 
-    // Las dejo para que no te dé error si todavía tenés el bloque viejo en el HTML.
-    // Pero ya no las vamos a usar para mostrar mensajes.
+    private string errNombre   = string.Empty;
+    private string errTelefono = string.Empty;
+    private string errCorreo   = string.Empty;
+    private string errDireccion = string.Empty;
+
     private string mensaje = string.Empty;
     private string claseMensaje = string.Empty;
 
@@ -178,6 +202,26 @@
         }
     }
 
+    private bool ValidarFormulario()
+    {
+        errNombre    = string.Empty;
+        errTelefono  = string.Empty;
+        errCorreo    = string.Empty;
+        errDireccion = string.Empty;
+
+        var nombre   = ValidacionesFormularioUsuario.ValidarNombre(solicitud.NombreCompleto);
+        var telefono = ValidacionesFormularioUsuario.ValidarTelefonoObligatorio(solicitud.Telefono);
+        var correo   = ValidacionesFormularioUsuario.ValidarCorreo(solicitud.Correo);
+        var direccion = ValidacionesFormularioUsuario.ValidarDireccion(solicitud.Direccion);
+
+        if (!nombre.Valido)   errNombre    = nombre.Mensaje;
+        if (!telefono.Valido) errTelefono  = telefono.Mensaje;
+        if (!correo.Valido)   errCorreo    = correo.Mensaje;
+        if (!direccion.Valido) errDireccion = direccion.Mensaje;
+
+        return nombre.Valido && telefono.Valido && correo.Valido && direccion.Valido;
+    }
+
     private async Task EnviarSolicitud()
     {
         mensaje = string.Empty;
@@ -188,23 +232,13 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(solicitud.NombreCompleto))
-        {
-            Toast.Warning("Debe ingresar el nombre completo.");
+        if (!ValidarFormulario())
             return;
-        }
 
-        if (string.IsNullOrWhiteSpace(solicitud.Telefono))
-        {
-            Toast.Warning("Debe ingresar el teléfono.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(solicitud.Direccion))
-        {
-            Toast.Warning("Debe ingresar la dirección.");
-            return;
-        }
+        solicitud.NombreCompleto = solicitud.NombreCompleto.Trim();
+        solicitud.Telefono       = ValidacionesFormularioUsuario.NormalizarTelefono(solicitud.Telefono);
+        solicitud.Correo         = solicitud.Correo?.Trim();
+        solicitud.Direccion      = solicitud.Direccion.Trim();
 
         enviando = true;
 
@@ -245,18 +279,16 @@ else
         }
     }
 
-    private void VolverPaquetes()
-    {
-        Navigation.NavigateTo("/paquetes");
-    }
+    private void VolverPaquetes() => Navigation.NavigateTo("/paquetes");
 
-    private void MostrarExito(string texto)
-    {
-        Toast.Success(texto);
-    }
+    private void MostrarExito(string texto) => Toast.Success(texto);
+    private void MostrarError(string texto)  => Toast.Error(texto);
 
-    private void MostrarError(string texto)
+    private static string ClaseInput(string? error)
     {
-        Toast.Error(texto);
+        const string b = "w-full px-4 py-3 rounded-lg bg-domus-dark border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:ring-1 transition-colors";
+        return string.IsNullOrWhiteSpace(error)
+            ? $"{b} border-domus-border focus:border-domus-cyan focus:ring-domus-cyan/30"
+            : $"{b} border-red-500/50 focus:border-red-400 focus:ring-red-400/20";
     }
 }

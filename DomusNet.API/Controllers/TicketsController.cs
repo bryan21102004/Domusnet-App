@@ -1,5 +1,6 @@
 using DomusNet.API.DTOs;
 using DomusNet.API.Services.Interfaces;
+using DomusNet.API.Services.ReglasNegocio;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace DomusNet.API.Controllers;
 public class TicketsController : ControllerBase
 {
     private readonly ITicketsService _service;
+    private readonly ValidacionesGenerales _v = new();
 
     public TicketsController(ITicketsService service)
     {
@@ -81,6 +83,18 @@ public class TicketsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ReportarCliente([FromBody] ReportarAveriaClienteDto dto)
     {
+        try
+        {
+            _v.ValidarTelefono(dto.Telefono);
+            _v.ValidarDescripcion(dto.DescripcionProblema, "Descripción del problema", 10, 1000);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+
+        dto.DescripcionProblema = dto.DescripcionProblema.Trim();
+
         var result = await _service.ReportarClienteAsync(dto);
 
         if (result.Resultado == 1)
@@ -102,6 +116,9 @@ public class TicketsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> VerificarCliente([FromQuery] string telefono)
     {
+        try { _v.ValidarTelefono(telefono); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+
         var cliente = await _service.VerificarClientePorTelefonoAsync(telefono);
 
         if (cliente == null)
