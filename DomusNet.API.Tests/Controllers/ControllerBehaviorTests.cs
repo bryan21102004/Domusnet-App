@@ -136,28 +136,33 @@ public class ControllerBehaviorTests
     }
 
     [Fact]
-    public async Task Solicitudes_Crear_CuandoServicioRetornaExito_DebeRetornarOk()
+public async Task Solicitudes_Crear_CuandoServicioRetornaExito_DebeRetornarOk()
+{
+    var serviceMock = new Mock<ISolicitudesService>();
+
+    serviceMock
+        .Setup(s => s.CrearAsync(It.IsAny<SolicitudCreateDto>()))
+        .ReturnsAsync(new SolicitudResultDto
+        {
+            Resultado = 1,
+            IdGenerado = 20,
+            Mensaje = "Solicitud registrada correctamente"
+        });
+
+    var controller = new SolicitudesController(serviceMock.Object);
+
+    var dto = new SolicitudCreateDto
     {
-        
-        var serviceMock = new Mock<ISolicitudesService>();
+        NombreCompleto = "Juan Perez",
+        Telefono = "88888888",
+        Correo = "juan@correo.com",
+        Direccion = "Direccion de prueba completa"
+    };
 
-        serviceMock
-            .Setup(s => s.CrearAsync(It.IsAny<SolicitudCreateDto>()))
-            .ReturnsAsync(new SolicitudResultDto
-            {
-                Resultado = 1,
-                IdGenerado = 20,
-                Mensaje = "Solicitud registrada correctamente"
-            });
+    var resultado = await controller.Crear(dto);
 
-        var controller = new SolicitudesController(serviceMock.Object);
-
-        
-        var resultado = await controller.Crear(null!);
-
-        
-        Assert.IsType<OkObjectResult>(resultado);
-    }
+    Assert.IsType<OkObjectResult>(resultado);
+}
 
     [Fact]
     public async Task Solicitudes_Atender_CuandoNoExiste_DebeRetornarNotFound()

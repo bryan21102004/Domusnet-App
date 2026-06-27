@@ -1,9 +1,13 @@
 using System.Runtime.CompilerServices;
 using Bunit;
 using Xunit;
-
+using System;
+using System.Net.Http;
 
 using DomusNet.Blazor.Pages;
+using DomusNet.Blazor.Services;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace DomusNet.Blazor.Tests.Components;
 
@@ -32,21 +36,28 @@ public class PublicPagesRenderTests : BunitContext
         Assert.Single(componente.FindAll("button[type=submit]"));
     }
 
-    [Fact]
-    public void AccesoInterno_EnviarVacio_DebeMostrarMensajeValidacion()
+  [Fact]
+public void AccesoInterno_EnviarVacio_DebeMostrarMensajeValidacion()
+{
+    using var ctx = new BunitContext();
+
+    ctx.Services.AddSingleton(new HttpClient
     {
-        
-        var componente = Render<AccesoInterno>();
+        BaseAddress = new Uri("http://localhost/")
+    });
 
-        
-        componente.Find("form").Submit();
+    ctx.Services.AddSingleton<AuthFrontendService>();
 
-       
-        componente.WaitForAssertion(() =>
-        {
-            Assert.Contains("Debe de ingresar su correo y contraseña", componente.Markup);
-        });
-    }
+    var cut = ctx.Render<AccesoInterno>();
+
+    var boton = cut.Find("button[type='submit']");
+    boton.Click();
+
+    cut.WaitForAssertion(() =>
+    {
+        Assert.Contains("Debe ingresar su correo electrónico.", cut.Markup);
+    });
+}
 
     [Fact]
     public void ReportarAveria_DebeRenderizarFormularioReporte()
