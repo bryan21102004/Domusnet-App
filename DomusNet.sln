@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomusNet.Blazor", "DomusNet
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomusNet.Shared", "DomusNet.Shared\DomusNet.Shared.csproj", "{E58FACB1-2781-4CAE-AE2A-81238A6B847C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DomusNet.API.Tests", "DomusNet.API.Tests\DomusNet.API.Tests.csproj", "{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{E58FACB1-2781-4CAE-AE2A-81238A6B847C}.Release|x64.Build.0 = Release|Any CPU
 		{E58FACB1-2781-4CAE-AE2A-81238A6B847C}.Release|x86.ActiveCfg = Release|Any CPU
 		{E58FACB1-2781-4CAE-AE2A-81238A6B847C}.Release|x86.Build.0 = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|x64.Build.0 = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Debug|x86.Build.0 = Debug|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|x64.ActiveCfg = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|x64.Build.0 = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|x86.ActiveCfg = Release|Any CPU
+		{B37D9A55-51E2-4A0F-9D3B-BD8E4EC68C08}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
