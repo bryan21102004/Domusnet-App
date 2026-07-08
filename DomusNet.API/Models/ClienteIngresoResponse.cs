@@ -16,4 +16,5 @@ public class ClienteIngresoResponse
     public string NombrePaquete { get; set; } = string.Empty;
     public string? Velocidad { get; set; }
     public decimal Precio { get; set; }
+    public string? NumeroContrato { get; set; }
 }

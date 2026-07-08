@@ -2,9 +2,8 @@ namespace DomusNet.Blazor.Models;
 
 public class ReportarAveriaRequest
 {
+    public string NumeroContrato { get; set; } = string.Empty;
     public string NombreCompleto { get; set; } = string.Empty;
-    public string Telefono { get; set; } = string.Empty;
-    public string Direccion { get; set; } = string.Empty;
     public string DescripcionProblema { get; set; } = string.Empty;
 }
 
@@ -75,5 +74,5 @@ public class ClienteVerificadoResponse
 {
     public int IdCliente { get; set; }
     public string NombreCompleto { get; set; } = string.Empty;
-    public string Direccion { get; set; } = string.Empty;
+    public string NumeroContrato { get; set; } = string.Empty;
 }

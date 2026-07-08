@@ -30,6 +30,10 @@ public class Cliente
     [Required]
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 
+    [MaxLength(50)]
+public string? NumeroContrato { get; set; }
+
+
     [Required]
     [ForeignKey(nameof(Vendedor))]
     public int IdVendedor { get; set; }

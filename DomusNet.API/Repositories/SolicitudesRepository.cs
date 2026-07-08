@@ -53,7 +53,8 @@ public class SolicitudesRepository : ISolicitudesRepository
     public async Task<SpResultDto?> ConvertirSolicitudEnClienteAsync(
         int idSolicitud,
         int idVendedor,
-        string? notas)
+        string? notas,
+        string? numeroContrato)
     {
         using var connection = _context.CreateConnection();
 
@@ -63,8 +64,10 @@ public class SolicitudesRepository : ISolicitudesRepository
             {
                 IdSolicitud = idSolicitud,
                 IdVendedor = idVendedor,
-                Notas = notas
+                Notas = notas,
+                NumeroContrato = numeroContrato 
             },
             commandType: CommandType.StoredProcedure);
     }
+
 }

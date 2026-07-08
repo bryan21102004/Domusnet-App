@@ -21,4 +21,6 @@ public class ClienteResponse
 
     public DateTime? FechaAsignacion { get; set; }
     public string? EstadoAsignacion { get; set; }
+    public string? NumeroContrato { get; set; }
+
 }

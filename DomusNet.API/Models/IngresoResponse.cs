@@ -24,4 +24,5 @@ public class IngresoResponse
 
     public int IdRegistradoPor { get; set; }
     public string? NombreRegistradoPor { get; set; }
+    public string? NumeroContrato { get; set; }
 }

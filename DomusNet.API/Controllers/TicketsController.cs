@@ -132,6 +132,30 @@ public class TicketsController : ControllerBase
         return Ok(cliente);
     }
 
+    [HttpGet("verificar-contrato/{numeroContrato}")]
+[AllowAnonymous]
+public async Task<IActionResult> VerificarClientePorContrato(string numeroContrato)
+{
+    if (string.IsNullOrWhiteSpace(numeroContrato))
+    {
+        return BadRequest(new { mensaje = "Debe ingresar el número de contrato." });
+    }
+
+    numeroContrato = numeroContrato.Trim().ToUpper();
+
+    var cliente = await _service.VerificarClientePorContratoAsync(numeroContrato);
+
+    if (cliente == null)
+    {
+        return NotFound(new
+        {
+            mensaje = "No se encontró un cliente activo con ese número de contrato. Solo clientes con servicio instalado pueden reportar averías."
+        });
+    }
+
+    return Ok(cliente);
+}
+
     [HttpPut("{id}/estado")]
     [Authorize(Roles = "Administrador,Tecnico")]
     public async Task<IActionResult> ActualizarEstado(

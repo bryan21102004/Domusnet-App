@@ -1,4 +1,5 @@
 using DomusNet.API.DTOs;
+using DomusNet.API.Models;
 
 namespace DomusNet.API.Repositories.Interfaces;
 
@@ -17,6 +18,7 @@ public interface ITicketsRepository
     Task<IEnumerable<ClienteCorreoDto>> ListarClientesActivosConCorreoAsync();
 
     Task<ClienteReporteDto?> BuscarClienteActivoPorTelefonoAsync(string telefono);
+    Task<ClienteVerificadoResponse?> VerificarClientePorContratoAsync(string numeroContrato);
 
     Task<SpResultDto> CrearReporteClienteAsync(
         string titulo,

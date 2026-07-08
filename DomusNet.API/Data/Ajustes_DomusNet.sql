@@ -171,3 +171,4 @@ WHERE c.object_id = OBJECT_ID('dbo.Ingresos')
   )
 ORDER BY c.column_id;
 GO
+ALTER TABLE Clientes ADD NumeroContrato NVARCHAR(50) NULL;

@@ -1,7 +1,6 @@
 
 USE DomusNet
 GO
-
 DROP PROCEDURE IF EXISTS listarClientes;
 GO
 CREATE OR ALTER PROCEDURE dbo.listarClientes
@@ -19,6 +18,7 @@ BEGIN
         c.EstadoPago,
         c.FechaRegistro,
         c.Activo,
+        c.NumeroContrato,
 
         u.Nombre AS NombreVendedor,
 
@@ -48,6 +48,9 @@ BEGIN
 END;
 GO
 
+
+
+
 CREATE OR ALTER PROCEDURE buscarCliente
     @IdCliente INT
 AS
@@ -55,12 +58,13 @@ BEGIN
     SET NOCOUNT ON;
     SELECT c.IdCliente, c.NombreCompleto, c.Telefono, c.Correo, c.Direccion,
            c.EstadoPago, c.FechaRegistro, c.IdVendedor, u.Nombre AS NombreVendedor,
-           c.IdSolicitudOrigen, c.Activo
+           c.IdSolicitudOrigen, c.Activo, c.NumeroContrato
     FROM Clientes c
     INNER JOIN Usuarios u ON c.IdVendedor = u.IdUsuario
     WHERE c.IdCliente = @IdCliente;
 END
 GO
+
 
 -- Retorna: 1=ok, -1=telefono duplicado
 CREATE OR ALTER PROCEDURE nuevoCliente
@@ -1326,10 +1330,12 @@ GO
 
 DROP PROCEDURE IF EXISTS dbo.convertirSolicitudEnCliente;
 GO
+
 CREATE OR ALTER PROCEDURE dbo.convertirSolicitudEnCliente
     @IdSolicitud INT,
     @IdVendedor INT,
-    @Notas NVARCHAR(500) = NULL
+    @Notas NVARCHAR(500) = NULL,
+    @NumeroContrato NVARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1472,6 +1478,19 @@ BEGIN
             RETURN;
         END
 
+        -- VALIDACIÓN DE CONTRATOS DUPLICADOS
+        IF @NumeroContrato IS NOT NULL AND EXISTS (
+            SELECT 1
+            FROM dbo.Clientes
+            WHERE NumeroContrato = @NumeroContrato
+              AND Activo = 1
+        )
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SELECT -13 AS Resultado, 0 AS IdGenerado, 'El número de contrato ya está registrado en otro cliente activo.' AS Mensaje;
+            RETURN;
+        END
+
         SELECT 
             @Precio = Precio,
             @Porcentaje = PorcentajeDistribucion
@@ -1494,7 +1513,8 @@ BEGIN
             FechaRegistro,
             IdVendedor,
             IdSolicitudOrigen,
-            Activo
+            Activo,
+            NumeroContrato -- <-- GUARDAR LA COLUMNA
         )
         VALUES (
             @NombreCompleto,
@@ -1505,7 +1525,8 @@ BEGIN
             GETUTCDATE(),
             @IdVendedor,
             @IdSolicitud,
-            1
+            1,
+            @NumeroContrato -- <-- GUARDAR EL VALOR
         );
 
         SET @IdCliente = SCOPE_IDENTITY();
@@ -1568,6 +1589,9 @@ BEGIN
     END CATCH
 END;
 GO
+
+
+
 
 
 
@@ -1635,6 +1659,7 @@ GO
 
 ----------------------------
 --Apartado de ingresos
+
 DROP PROCEDURE IF EXISTS dbo.listarClientesParaIngreso;
 GO
 
@@ -1649,6 +1674,7 @@ BEGIN
         c.Telefono,
         c.Correo,
         c.EstadoPago,
+        c.NumeroContrato,
 
         ap.IdAsignacion,
         ap.FechaVencimiento,
@@ -1853,128 +1879,56 @@ GO
 USE DomusNet;
 GO
 
+DROP PROCEDURE IF EXISTS dbo.listarIngresos;
+GO
+
 CREATE OR ALTER PROCEDURE dbo.listarIngresos
-    @Mes INT = NULL,
-    @Anio INT = NULL,
-    @Quincena NVARCHAR(20) = NULL,
-    @Estado NVARCHAR(20) = NULL
+    @Desde  DATETIME2 = NULL,
+    @Hasta  DATETIME2 = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT
+    SELECT 
         i.IdIngreso,
         i.IdCliente,
         c.NombreCompleto AS NombreCliente,
-        c.EstadoPago AS EstadoPago,
+        c.NumeroContrato AS NumeroContrato,
 
         i.IdPaquete,
-        ps.Nombre AS NombrePaquete,
-        ps.Velocidad AS Velocidad,
+        p.Nombre AS NombrePaquete,
+        p.Velocidad,
 
         i.Monto,
         i.Fecha,
         i.Descripcion,
-        i.TipoIngreso,
+
         i.MetodoPago,
-        i.Quincena,
-        i.Estado,
         i.ReferenciaPago,
         i.FechaProximoPago,
+        i.TipoIngreso,
+        i.Estado,
 
         i.IdRegistradoPor,
-        u.Nombre AS NombreRegistradoPor
+        u.Nombre AS NombreRegistradoPor,
+
+        c.EstadoPago
 
     FROM dbo.Ingresos i
-    LEFT JOIN dbo.Clientes c
+
+    LEFT JOIN dbo.Clientes c 
         ON i.IdCliente = c.IdCliente
 
-    LEFT JOIN dbo.PaquetesServicio ps
-        ON i.IdPaquete = ps.IdPaquete
+    LEFT JOIN dbo.PaquetesServicio p 
+        ON i.IdPaquete = p.IdPaquete
 
-    LEFT JOIN dbo.Usuarios u
+    INNER JOIN dbo.Usuarios u 
         ON i.IdRegistradoPor = u.IdUsuario
 
-    WHERE (@Mes IS NULL OR MONTH(i.Fecha) = @Mes)
-      AND (@Anio IS NULL OR YEAR(i.Fecha) = @Anio)
-      AND (@Quincena IS NULL OR i.Quincena = @Quincena)
-      AND (@Estado IS NULL OR i.Estado = @Estado)
+    WHERE (@Desde IS NULL OR i.Fecha >= @Desde)
+      AND (@Hasta IS NULL OR i.Fecha <= @Hasta)
 
     ORDER BY i.Fecha DESC;
-END;
-GO
-
-
-CREATE OR ALTER PROCEDURE validarDesactivacionUsuario
-    @IdUsuario INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    DECLARE @Detalles NVARCHAR(2000) = N'';
-    DECLARE @VentasActivas INT = 0;
-    DECLARE @SolicitudesEnProceso INT = 0;
-    DECLARE @InstalacionesVendedor INT = 0;
-    DECLARE @InstalacionesTecnico INT = 0;
-    DECLARE @TicketsAbiertos INT = 0;
-
-    IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE IdUsuario = @IdUsuario)
-    BEGIN
-        SELECT 0 AS TieneActividadPendiente, N'' AS Detalles;
-        RETURN;
-    END
-
-    SELECT @VentasActivas = COUNT(*)
-    FROM Ventas v
-    INNER JOIN AsignacionesPaquete ap ON v.IdAsignacion = ap.IdAsignacion
-    WHERE ap.IdVendedor = @IdUsuario
-      AND v.Estado = 'Activa'
-      AND ap.Estado = 'Activa';
-
-    SELECT @SolicitudesEnProceso = COUNT(*)
-    FROM SolicitudesServicio
-    WHERE IdVendedorAsignado = @IdUsuario
-      AND Estado IN ('Pendiente', 'Atendida', 'Programada');
-
-    SELECT @InstalacionesVendedor = COUNT(*)
-    FROM InstalacionesProgramadas
-    WHERE IdVendedorPrograma = @IdUsuario
-      AND Estado IN ('Programada', 'Reprogramada');
-
-    SELECT @InstalacionesTecnico = COUNT(*)
-    FROM InstalacionesProgramadas
-    WHERE IdTecnicoAsignado = @IdUsuario
-      AND Estado IN ('Programada', 'Reprogramada');
-
-    SELECT @TicketsAbiertos = COUNT(*)
-    FROM Tickets
-    WHERE IdAsignadoA = @IdUsuario
-      AND Estado IN ('Pendiente', 'EnProceso');
-
-    IF @VentasActivas > 0
-        SET @Detalles = @Detalles + CAST(@VentasActivas AS NVARCHAR(10)) + N' venta(s) activa(s)|';
-
-    IF @SolicitudesEnProceso > 0
-        SET @Detalles = @Detalles + CAST(@SolicitudesEnProceso AS NVARCHAR(10)) + N' solicitud(es) en proceso|';
-
-    IF @InstalacionesVendedor > 0
-        SET @Detalles = @Detalles + CAST(@InstalacionesVendedor AS NVARCHAR(10)) + N' instalación(es) programada(s) como vendedor|';
-
-    IF @InstalacionesTecnico > 0
-        SET @Detalles = @Detalles + CAST(@InstalacionesTecnico AS NVARCHAR(10)) + N' instalación(es) pendiente(s) como técnico|';
-
-    IF @TicketsAbiertos > 0
-        SET @Detalles = @Detalles + CAST(@TicketsAbiertos AS NVARCHAR(10)) + N' ticket(s) abierto(s)|';
-
-    IF LEN(@Detalles) > 0
-        SET @Detalles = LEFT(@Detalles, LEN(@Detalles) - 1);
-
-    SELECT
-        CASE
-            WHEN @VentasActivas + @SolicitudesEnProceso + @InstalacionesVendedor + @InstalacionesTecnico + @TicketsAbiertos > 0
-            THEN 1 ELSE 0
-        END AS TieneActividadPendiente,
-        @Detalles AS Detalles;
 END;
 GO
 
@@ -2003,4 +1957,23 @@ BEGIN
 END;
 GO
 
+
+CREATE OR ALTER PROCEDURE dbo.verificarClientePorContrato
+    @NumeroContrato NVARCHAR(30)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.IdCliente,
+        c.NombreCompleto,
+        c.NumeroContrato
+    FROM dbo.Clientes c
+    INNER JOIN dbo.AsignacionesPaquete ap
+        ON c.IdCliente = ap.IdCliente
+       AND ap.Estado = 'Activa'
+    WHERE c.Activo = 1
+      AND c.NumeroContrato = @NumeroContrato;
+END;
+GO
 

@@ -31,13 +31,16 @@ public class SolicitudesService : ISolicitudesService
     public async Task<SpResultDto> ConvertirSolicitudEnClienteAsync(
         int idSolicitud,
         int idVendedor,
-        string? notas)
+        string? notas,
+        string? numeroContrato) 
     {
         var resultado = await _repository.ConvertirSolicitudEnClienteAsync(
             idSolicitud,
             idVendedor,
-            notas
+            notas,
+            numeroContrato 
         );
+        
 
         return resultado ?? new SpResultDto
         {

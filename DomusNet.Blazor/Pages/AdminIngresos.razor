@@ -99,15 +99,21 @@
                                 Cliente
                             </label>
 
+                            <input class="w-full px-4 py-2.5 rounded-lg bg-domus-dark border border-domus-border text-domus-text text-sm mb-3.5 focus:outline-none focus:border-domus-cyan placeholder-domus-text-secondary/50"
+                                   placeholder="Buscar por nombre o número de contrato..."
+                                   @bind="busquedaClienteIngreso"
+                                   @bind:event="oninput"
+                                   @bind:after="AplicarBusquedaClienteIngreso" />
+
                             <select class="w-full px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text focus:outline-none focus:border-domus-cyan"
                                     value="@idClienteSeleccionado"
                                     @onchange="SeleccionarCliente">
                                 <option value="0">Seleccione un cliente</option>
 
-                                @foreach (var cliente in clientes)
+                                @foreach (var cliente in clientesFiltradosIngreso)
                                 {
                                     <option value="@cliente.IdCliente">
-                                        @cliente.NombreCompleto - @cliente.NombrePaquete
+                                        @cliente.NombreCompleto - @cliente.NombrePaquete @(string.IsNullOrWhiteSpace(cliente.NumeroContrato) ? "" : $" - Contrato: {cliente.NumeroContrato}")
                                     </option>
                                 }
                             </select>
@@ -123,6 +129,10 @@
 
                                     <p class="text-lg font-bold text-domus-text">
                                         @ClienteSeleccionado.NombreCompleto
+                                    </p>
+
+                                    <p class="text-xs text-domus-cyan-light mt-1 font-semibold">
+                                        Contrato: @ObtenerTexto(ClienteSeleccionado.NumeroContrato, "Sin contrato")
                                     </p>
                                 </div>
 
@@ -256,8 +266,9 @@
                         </div>
 
                         <input class="px-4 py-3 rounded-lg bg-domus-dark border border-domus-border text-domus-text placeholder-domus-text-secondary/50 focus:outline-none focus:border-domus-cyan min-w-[260px]"
-                               placeholder="Buscar cliente, paquete, método o referencia..."
-                               @bind="busqueda" />
+                               placeholder="Buscar cliente, contrato, paquete, método o referencia..."
+                               @bind="busqueda"
+                               @bind:event="oninput" />
                     </div>
                 </div>
 
@@ -285,7 +296,6 @@
                 {
                     <div class="domus-card overflow-hidden p-0">
 
-                        <!-- Resumen interno -->
                         <div class="px-6 py-5 border-b border-domus-border bg-domus-dark/40">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                 <div>
@@ -310,50 +320,20 @@
                             </div>
                         </div>
 
-                        <!-- Tabla -->
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[1250px] text-sm">
                                 <thead class="bg-domus-dark border-b border-domus-border">
                                     <tr class="text-left">
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Pago
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Cliente
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Estado pago
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Paquete
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Monto
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Método
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Fecha pago
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Próximo pago
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Referencia
-                                        </th>
-
-                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">
-                                            Registrado por
-                                        </th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Pago</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Cliente</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Estado pago</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Paquete</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Monto</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Método</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Fecha pago</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Próximo pago</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Referencia</th>
+                                        <th class="px-5 py-4 font-semibold text-domus-text-secondary">Registrado por</th>
                                     </tr>
                                 </thead>
 
@@ -362,7 +342,6 @@
                                     {
                                         <tr class="hover:bg-white/[0.03] transition-colors">
 
-                                            <!-- Pago -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="font-bold text-domus-text">
                                                     #@ingreso.IdIngreso
@@ -377,7 +356,6 @@
                                                 </span>
                                             </td>
 
-                                            <!-- Cliente -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="font-bold text-domus-text">
                                                     @ObtenerTexto(ingreso.NombreCliente, "Cliente no especificado")
@@ -386,9 +364,12 @@
                                                 <p class="text-xs text-domus-text-secondary mt-1">
                                                     Cliente @(ingreso.IdCliente.HasValue ? $"#{ingreso.IdCliente}" : "sin ID")
                                                 </p>
+
+                                                <p class="text-xs text-domus-cyan-light mt-1 font-semibold">
+                                                    Contrato: @ObtenerTexto(ingreso.NumeroContrato, "Sin contrato")
+                                                </p>
                                             </td>
 
-                                            <!-- Estado de pago -->
                                             <td class="px-5 py-5 align-top">
                                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border @ObtenerClaseEstadoPago(ingreso.EstadoPago)">
                                                     @ObtenerTexto(ingreso.EstadoPago, "Sin estado")
@@ -399,7 +380,6 @@
                                                 </p>
                                             </td>
 
-                                            <!-- Paquete -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="font-semibold text-domus-text">
                                                     @ObtenerTexto(ingreso.NombrePaquete, "Sin paquete")
@@ -410,21 +390,18 @@
                                                 </p>
                                             </td>
 
-                                            <!-- Monto -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="font-extrabold text-emerald-300">
                                                     ₡@ingreso.Monto.ToString("N0")
                                                 </p>
                                             </td>
 
-                                            <!-- Método -->
                                             <td class="px-5 py-5 align-top">
                                                 <span class="inline-flex px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-domus-cyan-light text-xs font-semibold">
                                                     @ObtenerTexto(ingreso.MetodoPago, "Sin método")
                                                 </span>
                                             </td>
 
-                                            <!-- Fecha pago -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="text-domus-text font-semibold">
                                                     @ingreso.Fecha.ToString("dd/MM/yyyy")
@@ -435,7 +412,6 @@
                                                 </p>
                                             </td>
 
-                                            <!-- Próximo pago -->
                                             <td class="px-5 py-5 align-top">
                                                 @if (ingreso.FechaProximoPago.HasValue)
                                                 {
@@ -451,7 +427,6 @@
                                                 }
                                             </td>
 
-                                            <!-- Referencia -->
                                             <td class="px-5 py-5 align-top max-w-[200px]">
                                                 <p class="text-domus-text-secondary break-all">
                                                     @ObtenerTexto(ingreso.ReferenciaPago, "Sin referencia")
@@ -465,7 +440,6 @@
                                                 }
                                             </td>
 
-                                            <!-- Registrado por -->
                                             <td class="px-5 py-5 align-top">
                                                 <p class="text-domus-text font-semibold">
                                                     @ObtenerTexto(ingreso.NombreRegistradoPor, "Sin usuario")
@@ -481,11 +455,8 @@
                             </table>
                         </div>
 
-                        <!-- Footer -->
                         <div class="px-6 py-4 border-t border-domus-border bg-domus-dark/30">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                                
-
                                 <p class="text-sm text-domus-text-secondary">
                                     Total visible:
                                     <span class="font-bold text-emerald-300">
@@ -511,6 +482,7 @@
 
     private int idClienteSeleccionado;
     private string busqueda = string.Empty;
+    private string busquedaClienteIngreso = string.Empty;
 
     private bool cargando = true;
     private bool guardando = false;
@@ -518,18 +490,50 @@
     private string mensaje = string.Empty;
     private string claseMensaje = string.Empty;
 
+    private List<ClienteIngresoResponse> clientesFiltradosIngreso
+    {
+        get
+        {
+            var termino = busquedaClienteIngreso?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(termino))
+            {
+                return clientes;
+            }
+
+            return clientes
+                .Where(c =>
+                    (c.NombreCompleto ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (c.NumeroContrato ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (c.NombrePaquete ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
     private ClienteIngresoResponse? ClienteSeleccionado =>
         clientes.FirstOrDefault(c => c.IdCliente == idClienteSeleccionado);
 
-    private List<IngresoResponse> ingresosFiltrados =>
-        ingresos
-            .Where(i =>
-                string.IsNullOrWhiteSpace(busqueda) ||
-                (i.NombreCliente ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
-                (i.NombrePaquete ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
-                (i.MetodoPago ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
-                (i.ReferenciaPago ?? string.Empty).Contains(busqueda, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+    private List<IngresoResponse> ingresosFiltrados
+    {
+        get
+        {
+            var termino = busqueda?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(termino))
+            {
+                return ingresos;
+            }
+
+            return ingresos
+                .Where(i =>
+                    (i.NombreCliente ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (i.NumeroContrato ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (i.NombrePaquete ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (i.MetodoPago ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                    (i.ReferenciaPago ?? string.Empty).Contains(termino, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -545,23 +549,53 @@
         ingresos = await IngresosService.ListarIngresosAsync();
 
         cargando = false;
+
+        AplicarBusquedaClienteIngreso();
+    }
+
+    private void AplicarBusquedaClienteIngreso()
+    {
+        var encontrados = clientesFiltradosIngreso;
+
+        if (encontrados.Count == 1)
+        {
+            SeleccionarClienteDesdeObjeto(encontrados[0]);
+        }
+        else
+        {
+            idClienteSeleccionado = 0;
+            form.IdCliente = 0;
+            form.Monto = 0;
+            form.Descripcion = string.Empty;
+        }
     }
 
     private void SeleccionarCliente(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out var idCliente))
+        if (int.TryParse(e.Value?.ToString(), out var idCliente) && idCliente > 0)
         {
-            idClienteSeleccionado = idCliente;
-            form.IdCliente = idCliente;
-
-            var cliente = ClienteSeleccionado;
+            var cliente = clientes.FirstOrDefault(c => c.IdCliente == idCliente);
 
             if (cliente is not null)
             {
-                form.Monto = cliente.Precio;
-                form.Descripcion = "Pago mensual de servicio";
+                SeleccionarClienteDesdeObjeto(cliente);
             }
         }
+        else
+        {
+            idClienteSeleccionado = 0;
+            form.IdCliente = 0;
+            form.Monto = 0;
+            form.Descripcion = string.Empty;
+        }
+    }
+
+    private void SeleccionarClienteDesdeObjeto(ClienteIngresoResponse cliente)
+    {
+        idClienteSeleccionado = cliente.IdCliente;
+        form.IdCliente = cliente.IdCliente;
+        form.Monto = cliente.Precio;
+        form.Descripcion = "Pago mensual de servicio";
     }
 
     private async Task RegistrarIngreso()
@@ -626,6 +660,7 @@
     {
         form = new RegistrarIngresoRequest();
         idClienteSeleccionado = 0;
+        busquedaClienteIngreso = string.Empty;
     }
 
     private void MostrarExito(string texto)

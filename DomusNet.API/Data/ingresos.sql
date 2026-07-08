@@ -530,45 +530,6 @@ END;
 GO
 
 
-CREATE OR ALTER PROCEDURE dbo.listarIngresos
-    @Mes INT = NULL,
-    @Anio INT = NULL,
-    @Quincena NVARCHAR(20) = NULL,
-    @Estado NVARCHAR(20) = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT
-        i.IdIngreso,
-        i.IdCliente,
-        c.NombreCompleto AS Cliente,
-        i.IdPaquete,
-        ps.Nombre AS Paquete,
-        i.Monto,
-        i.Fecha,
-        i.Descripcion,
-        i.TipoIngreso,
-        i.MetodoPago,
-        i.Quincena,
-        i.Estado,
-        i.IdRegistradoPor,
-        u.Nombre AS RegistradoPor
-    FROM dbo.Ingresos i
-    LEFT JOIN dbo.Clientes c
-        ON i.IdCliente = c.IdCliente
-    LEFT JOIN dbo.PaquetesServicio ps
-        ON i.IdPaquete = ps.IdPaquete
-    INNER JOIN dbo.Usuarios u
-        ON i.IdRegistradoPor = u.IdUsuario
-    WHERE (@Mes IS NULL OR MONTH(i.Fecha) = @Mes)
-      AND (@Anio IS NULL OR YEAR(i.Fecha) = @Anio)
-      AND (@Quincena IS NULL OR i.Quincena = @Quincena)
-      AND (@Estado IS NULL OR i.Estado = @Estado)
-    ORDER BY i.Fecha DESC;
-END;
-GO
-
 CREATE OR ALTER PROCEDURE dbo.obtenerDetalleReporteIngreso
     @IdIngresoMensual INT
 AS

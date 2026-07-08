@@ -75,18 +75,18 @@ public class InstalacionesVendedorService
         return await response.Content.ReadFromJsonAsync<ResultadoOperacion>();
     }
 public async Task<ResultadoOperacion?> ConvertirSolicitudEnClienteAsync(
-    int idSolicitud,
+  int idSolicitud,
     int idVendedor,
-    string? notas)
+    string? notas,
+    string? numeroContrato) 
 {
     await AgregarTokenAsync();
-
     var request = new
     {
         idVendedor = idVendedor,
-        notas = notas
+        notas = notas,
+        numeroContrato = numeroContrato 
     };
-
     var response = await _http.PostAsJsonAsync(
         $"api/solicitudes/{idSolicitud}/convertir-cliente",
         request

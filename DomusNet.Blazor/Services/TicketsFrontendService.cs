@@ -57,25 +57,12 @@ public class TicketsFrontendService
             Mensaje = error?.Mensaje ?? "No se pudo registrar el reporte de avería."
         };
     }
-
-    public async Task<ClienteVerificadoResponse?> VerificarClienteAsync(string telefono)
-    {
-        if (string.IsNullOrWhiteSpace(telefono))
-        {
-            return null;
-        }
-
-        var url = $"api/Tickets/verificar-cliente?telefono={Uri.EscapeDataString(telefono.Trim())}";
-        var response = await _http.GetAsync(url);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return null;
-        }
-
-        return await response.Content.ReadFromJsonAsync<ClienteVerificadoResponse>(JsonOptions);
-    }
-
+public async Task<ClienteVerificadoResponse?> VerificarClientePorContratoAsync(string numeroContrato)
+{
+    return await _http.GetFromJsonAsync<ClienteVerificadoResponse>(
+        $"api/tickets/verificar-contrato/{Uri.EscapeDataString(numeroContrato)}"
+    );
+}
     public async Task<List<TicketResponse>> ListarTicketsAsync(string? estado = null)
     {
         await AgregarTokenAsync();

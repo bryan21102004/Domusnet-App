@@ -4,5 +4,6 @@ namespace DomusNet.API.DTOs
     {
         public int IdVendedor { get; set; }
         public string? Notas { get; set; }
+     public string? NumeroContrato { get; set; }
     }
 }

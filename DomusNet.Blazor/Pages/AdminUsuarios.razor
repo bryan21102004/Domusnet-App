@@ -126,11 +126,16 @@
 
                         <div>
                             <label class="block text-sm font-medium text-domus-text mb-1.5">Teléfono</label>
-                            <input type="tel"
+                            <input type="text"
+                                   inputmode="numeric"
+                                   maxlength="8"
+                                   pattern="[0-9]{8}"
                                    @bind="formTelefono"
                                    @bind:event="oninput"
-                                   class="@ClaseInput(errorTelefono)"
-                                   placeholder="8888-8888 o +50688888888" />
+                                   onkeydown="return (event.key >= '0' && event.key <= '9') || ['Backspace','Delete','Tab','ArrowLeft','ArrowRight','Home','End'].includes(event.key)"
+                                   onpaste="return false"
+                                   placeholder="Ej: 88888888"
+                                   class="@ClaseInput(errorTelefono)" />
                             @if (!string.IsNullOrWhiteSpace(errorTelefono))
                             {
                                 <p class="text-xs text-red-300 mt-1.5">@errorTelefono</p>

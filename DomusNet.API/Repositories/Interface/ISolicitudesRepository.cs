@@ -13,6 +13,7 @@ public interface ISolicitudesRepository
     Task<SpResultDto?> ConvertirSolicitudEnClienteAsync(
         int idSolicitud,
         int idVendedor,
-        string? notas
+        string? notas,
+        string? numeroContrato
     );
 }

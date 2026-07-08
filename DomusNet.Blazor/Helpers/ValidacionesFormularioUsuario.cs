@@ -55,24 +55,21 @@ public static class ValidacionesFormularioUsuario
         return (true, string.Empty);
     }
 
-    public static (bool Valido, string Mensaje) ValidarTelefono(string? telefono)
-    {
-        if (string.IsNullOrWhiteSpace(telefono))
-            return (true, string.Empty);
-
-        var soloDigitos = Regex.Replace(telefono.Trim(), @"\D", string.Empty);
-
-        if (soloDigitos.StartsWith("506") && soloDigitos.Length >= 11)
-            soloDigitos = soloDigitos[^8..];
-
-        if (soloDigitos.Length != 8)
-            return (false, "El teléfono debe tener 8 dígitos (Costa Rica). Ejemplo: 7537-2729 o +50675372729.");
-
-        if (!TelefonoOchoDigitosRegex.IsMatch(soloDigitos))
-            return (false, "El teléfono no es válido para Costa Rica. Debe iniciar con 2, 4, 5, 6, 7 u 8.");
-
+  public static (bool Valido, string Mensaje) ValidarTelefono(string? telefono)
+{
+    if (string.IsNullOrWhiteSpace(telefono))
         return (true, string.Empty);
-    }
+
+    var valor = telefono.Trim();
+
+    if (!Regex.IsMatch(valor, @"^\d{8}$"))
+        return (false, "El teléfono debe contener solo números y tener exactamente 8 dígitos.");
+
+    if (!TelefonoOchoDigitosRegex.IsMatch(valor))
+        return (false, "El teléfono no es válido para Costa Rica. Debe iniciar con 2, 4, 5, 6, 7 u 8.");
+
+    return (true, string.Empty);
+}
 
     private static readonly Regex MayusculaRegex = new(@"[A-Z]", RegexOptions.Compiled);
     private static readonly Regex MinusculaRegex = new(@"[a-z]", RegexOptions.Compiled);
@@ -130,18 +127,11 @@ public static class ValidacionesFormularioUsuario
     public static (bool Valido, string Mensaje) ValidarDireccion(string? direccion)
         => ValidarLongitudMinima(direccion, "La dirección", 10);
 
-    public static string NormalizarTelefono(string? telefono)
-    {
-        if (string.IsNullOrWhiteSpace(telefono))
-            return string.Empty;
+public static string NormalizarTelefono(string? telefono)
+{
+    if (string.IsNullOrWhiteSpace(telefono))
+        return string.Empty;
 
-        var soloDigitos = Regex.Replace(telefono.Trim(), @"\D", string.Empty);
-
-        if (soloDigitos.StartsWith("506") && soloDigitos.Length >= 11)
-            soloDigitos = soloDigitos[^8..];
-
-        return soloDigitos.Length == 8
-            ? $"{soloDigitos[..4]}-{soloDigitos[4..]}"
-            : telefono.Trim();
-    }
+    return telefono.Trim();
+}
 }

@@ -88,7 +88,8 @@ public class SolicitudesController : ControllerBase
         var resultado = await _service.ConvertirSolicitudEnClienteAsync(
             idSolicitud,
             dto.IdVendedor,
-            dto.Notas
+            dto.Notas,
+            dto.NumeroContrato
         );
 
         if (resultado.Resultado == 1)

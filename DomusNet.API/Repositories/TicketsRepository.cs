@@ -3,6 +3,7 @@ using Dapper;
 using DomusNet.API.Data;
 using DomusNet.API.DTOs;
 using DomusNet.API.Repositories.Interfaces;
+using DomusNet.API.Models;
 
 namespace DomusNet.API.Repositories;
 
@@ -135,4 +136,15 @@ public class TicketsRepository : ITicketsRepository
             },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<ClienteVerificadoResponse?> VerificarClientePorContratoAsync(string numeroContrato)
+{
+    using var connection = _context.CreateConnection();
+
+    return await connection.QueryFirstOrDefaultAsync<ClienteVerificadoResponse>(
+        "dbo.verificarClientePorContrato",
+        new { NumeroContrato = numeroContrato },
+        commandType: CommandType.StoredProcedure
+    );
+}
 }

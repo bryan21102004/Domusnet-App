@@ -3,7 +3,7 @@ using DomusNet.API.Repositories.Interfaces;
 using DomusNet.API.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-
+using DomusNet.API.Models;
 namespace DomusNet.API.Services;
 
 public class TicketsService : ITicketsService
@@ -132,7 +132,14 @@ public class TicketsService : ITicketsService
         }
 
         return await _repository.BuscarClienteActivoPorTelefonoAsync(telefono.Trim());
+
+
     }
+public async Task<ClienteVerificadoResponse?> VerificarClientePorContratoAsync(string numeroContrato)
+{
+    return await _repository.VerificarClientePorContratoAsync(numeroContrato);
+}
+
 
     public async Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto)
     {

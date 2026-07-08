@@ -202,20 +202,25 @@ else
                     @foreach (var cliente in clientesFiltrados)
                     {
                         <tr class="hover:bg-white/[0.03] transition-colors">
+<!-- Cliente -->
+<td class="px-6 py-5 align-top">
+    <div>
+        <p class="font-bold text-domus-text">
+            @cliente.NombreCompleto
+        </p>
 
-                            <!-- Cliente -->
-                            <td class="px-6 py-5 align-top">
-                                <div>
-                                    <p class="font-bold text-domus-text">
-                                        @cliente.NombreCompleto
-                                    </p>
+        <p class="text-xs text-domus-text-secondary mt-1">
+            Cliente #@cliente.IdCliente
+        </p>
 
-                                    <p class="text-xs text-domus-text-secondary mt-1">
-                                        Cliente #@cliente.IdCliente
-                                    </p>
-                                </div>
-                            </td>
-
+        <p class="text-xs text-domus-cyan-light mt-1 font-semibold">
+            Contrato: @(!string.IsNullOrWhiteSpace(cliente.NumeroContrato)
+                ? cliente.NumeroContrato
+                : "Sin contrato")
+        </p>
+    </div>
+</td>
+                          
                             <!-- Contacto -->
                             <td class="px-6 py-5 align-top">
                                 <div class="space-y-1">

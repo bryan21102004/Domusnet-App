@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using DomusNet.API.DTOs;
+using DomusNet.API.Models;
 
 namespace DomusNet.API.Services.Interfaces;
 
@@ -13,5 +14,6 @@ public interface ITicketsService
     Task<SpResultDto> CrearAsync(TicketCreateDto dto);
     Task<SpResultDto> ReportarClienteAsync(ReportarAveriaClienteDto dto);
     Task<ClienteReporteDto?> VerificarClientePorTelefonoAsync(string telefono);
+    Task<ClienteVerificadoResponse?> VerificarClientePorContratoAsync(string numeroContrato);
     Task<int> ActualizarEstadoAsync(int idTicket, ActualizarEstadoTicketDto dto);
 }
